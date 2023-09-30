@@ -5,13 +5,9 @@ use sha2::Digest;
 
 struct Report<'a>(&'a str, &'static str);
 
-pub(crate) fn verify(root: &String) {
+pub(crate) fn verify(root: &String, index_location: &str) {
 	let root = PathBuf::from(root);
-	// correct the index path with os
-	#[cfg(target_os = "windows")]
-		let index_path = root.join("bin/win64/index.csv");
-	#[cfg(target_os = "linux")]
-		let index_path = root.join("bin/linux64/index.csv");
+	let index_path = root.join(index_location);
 
 	if !index_path.exists() {
 		eprintln!("Error: Index file `{}` does not exist.", index_path.to_str().unwrap());

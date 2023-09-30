@@ -6,6 +6,13 @@ use crate::verify::verify;
 mod verify;
 mod create;
 
+// correct the index path with os
+#[cfg(target_os = "windows")]
+const INDEX_PATH: &str = "bin/win64/index.csv";
+#[cfg(target_os = "linux")]
+const INDEX_PATH: &str = "bin/linux64/index.csv";
+
+
 fn main() {
 	let matches = Command::new("install_checker")
 		.author("ENDERZOMBI102 <enderzombi102.end@gmail.com>")
@@ -30,6 +37,13 @@ fn main() {
 			.short('e')
 			.action(ArgAction::Append)
 		)
+		.arg(Arg::new("index-loc")
+			.help("The index file to use")
+			.long("index")
+			.short('i')
+			.action(ArgAction::Set)
+			.default_value(INDEX_PATH)
+		)
 		.get_matches();
 
 	let ignored = [
@@ -37,6 +51,8 @@ fn main() {
 		String::from("hammer/autosave/*.*"),
 		String::from("**/index.csv"),
 	];
+
+	let index_location = matches.get_one::<String>( "index-loc" ).expect("zzzzzzzzz");
 
 	if matches.get_flag("new-index") {
 		let root = matches.get_one::<String>("root").unwrap();
@@ -50,8 +66,8 @@ fn main() {
 		excludes.push( &ignored[1] );
 		excludes.push( &ignored[2] );
 
-		return create(root, excludes);
+		return create(root, index_location, excludes);
 	}
 
-	return verify(matches.get_one::<String>("root").unwrap());
+	return verify(matches.get_one::<String>("root").unwrap(), index_location);
 }
