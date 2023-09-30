@@ -39,13 +39,19 @@ fn main() {
 	];
 
 	if matches.get_flag("new-index") {
-		return create(
-			matches.get_one::<String>("root").unwrap(),
-			matches.get_many("excluded")
-				.expect("fffff")
-				.chain( ignored.iter() )
-				.collect()
-		);
+		let root = matches.get_one::<String>("root").unwrap();
+
+		let mut excludes = matches.get_many("excluded")
+			.map(|it| it.copied().collect())
+			.or(Some(Vec::new()))
+			.unwrap();
+
+		excludes.push( &ignored[0] );
+		excludes.push( &ignored[1] );
+		excludes.push( &ignored[2] );
+
+		return create(root, excludes);
 	}
+
 	return verify(matches.get_one::<String>("root").unwrap());
 }
