@@ -1,5 +1,5 @@
 [package]
-    name = 'install_checker'
+    name = 'verifier'
     version = '0.1.0'
     edition = '2021'
     authors = [ 'ENDERZOMBI102 <enderzombi102.end@gmail.com>' ]
