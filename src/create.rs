@@ -37,17 +37,19 @@ pub(crate) fn create(root: &String, excluded: Vec<&String>) {
 		let path_str = path.to_str().expect("eeeee");
 
 		if !path.is_file() {
-			println!("sddd {path:?}");
 			continue;
 		}
 
+		// relative path
+		let path_rel = path.strip_prefix(&root).unwrap().to_str().unwrap();
+
 		for exclusion in &excluded {
-			if glob_match::glob_match(exclusion, path_str) {
+			if glob_match::glob_match(exclusion, path_rel) {
 				continue 'outer;
 			}
 		}
 
-		// verify it
+		// data-related columns
 		let data = match std::fs::read(&path) {
 			Ok(data) => data,
 			Err(err) => {
@@ -56,21 +58,23 @@ pub(crate) fn create(root: &String, excluded: Vec<&String>) {
 			}
 		};
 
-		let rel_path = path.strip_prefix(&root).unwrap().to_str().unwrap();
-
 		let size = data.len();
 
-		let mut sha256er = sha2::Sha256::new();
-		sha256er.update(&data);
-		let sha2 = sha256er.finalize();
+		let sha2 = {
+			let mut sha256er = sha2::Sha256::new();
+			sha256er.update(&data);
+			sha256er.finalize()
+		};
 
-		let mut crc32er = crc32fast::Hasher::new();
-		crc32er.update(data.as_slice());
-		let crc32 = crc32er.finalize();
+		let crc32 = {
+			let mut crc32er = crc32fast::Hasher::new();
+			crc32er.update(data.as_slice());
+			crc32er.finalize()
+		};
 
-		writer.write(format!("{rel_path}, {size}, {sha2:x}, {crc32}\n").as_bytes()).unwrap();
+		writer.write(format!("{path_rel}, {size}, {sha2:x}, {crc32}\n").as_bytes()).unwrap();
 
-		println!("Info: Processed entry `{path_str}`");
+		println!("Info: Processed file `{path_str}`");
 		count += 1;
 	}
 
