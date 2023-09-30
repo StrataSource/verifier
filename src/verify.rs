@@ -42,6 +42,8 @@ pub(crate) fn verify(root: &String) {
 	// working variables for the checking step
 	let header = csv::StringRecord::from(vec!["path", "size", "sha2", "crc32"]);
 	let mut reports: Vec<Report> = Vec::new();
+	let mut count = 0u32;
+	let start = std::time::Instant::now();
 
 	// read and verify
 	for entry in reader.records() {
@@ -82,7 +84,7 @@ pub(crate) fn verify(root: &String) {
 		}
 
 		let mut sha256er = sha2::Sha256::new();
-		sha256er.update(data);
+		sha256er.update(&data);
 		if format!("{:x}", sha256er.finalize()).as_str() != &*entry.sha2 {
 			reports.push(Report(entry.path.clone(), "Content crc32 doesn't match."));
 		}
@@ -94,11 +96,12 @@ pub(crate) fn verify(root: &String) {
 		}
 
 		println!("Info: Processed entry `{}`", entry.path);
+		count += 1;
 	}
 
 	for report in reports {
 		eprintln!( "In file `{}`: {}", report.0, report.1 );
 	}
 
-	println!("Info: Finished!");
+	println!("Info: Verified {count} files in {}s!", start.elapsed().as_secs());
 }
