@@ -35,7 +35,7 @@ fn main() {
 	let ignored = [
 		String::from("sdk_content/**/*.*"),
 		String::from("hammer/autosave/*.*"),
-		String::from("index.csv"),
+		String::from("**/index.csv"),
 	];
 
 	if matches.get_flag("new-index") {
