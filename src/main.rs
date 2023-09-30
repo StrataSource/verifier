@@ -1,11 +1,10 @@
-mod verify;
-mod create;
-
 use clap::{Arg, ArgAction, Command};
 
 use crate::create::create;
 use crate::verify::verify;
 
+mod verify;
+mod create;
 
 fn main() {
 	let matches = Command::new("install_checker")
@@ -30,14 +29,22 @@ fn main() {
 			.long("exclude")
 			.short('e')
 			.action(ArgAction::Append)
-			.default_values(["sdk_content", "hammer/autosave", "index.csv"])
 		)
 		.get_matches();
+
+	let ignored = [
+		String::from("sdk_content"),
+		String::from("hammer/autosave"),
+		String::from("index.csv"),
+	];
 
 	if matches.get_flag("new-index") {
 		return create(
 			matches.get_one::<String>("root").unwrap(),
-			matches.get_many("excluded").expect("fffff").collect()
+			matches.get_many("excluded")
+				.expect("fffff")
+				.chain( ignored.iter() )
+				.collect()
 		);
 	}
 	return verify(matches.get_one::<String>("root").unwrap());
