@@ -2,6 +2,7 @@
     name = 'verifier'
     version = '0.1.0'
     edition = '2021'
+    description = "A tool used to verify a game's install"
     authors = [ 'ENDERZOMBI102 <enderzombi102.end@gmail.com>' ]
 
 [dependencies]
