@@ -33,8 +33,8 @@ fn main() {
 		.get_matches();
 
 	let ignored = [
-		String::from("sdk_content"),
-		String::from("hammer/autosave"),
+		String::from("sdk_content/**/*.*"),
+		String::from("hammer/autosave/*.*"),
 		String::from("index.csv"),
 	];
 
