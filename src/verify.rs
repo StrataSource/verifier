@@ -1,19 +1,9 @@
 use std::path::PathBuf;
 use std::process::exit;
-use std::rc::Rc;
 
 use sha2::Digest;
-use serde_derive::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Serialize)]
-struct IndexEntry {
-	path: Rc<str>,
-	size: usize,
-	sha2: Box<str>,
-	crc32: u32,
-}
-
-struct Report(Rc<str>, &'static str);
+struct Report<'a>(&'a str, &'static str);
 
 pub(crate) fn verify(root: &String) {
 	let root = PathBuf::from(root);
@@ -30,8 +20,8 @@ pub(crate) fn verify(root: &String) {
 
 	println!( "Info: Using index file at `{}`", index_path.to_str().unwrap() );
 
-	// open index file with a csv reader
-	let mut reader = match csv::Reader::from_path(index_path) {
+	// open index file
+	let index_data = match std::fs::read_to_string(index_path) {
 		Ok(rdr) => rdr,
 		Err(err) => {
 			eprintln!("Error: Failed to open index file for reading: {err}");
@@ -40,68 +30,56 @@ pub(crate) fn verify(root: &String) {
 	};
 
 	// working variables for the checking step
-	let header = csv::StringRecord::from(vec!["path", "size", "sha2", "crc32"]);
 	let mut reports: Vec<Report> = Vec::new();
 	let mut count = 0u32;
 	let start = std::time::Instant::now();
 
 	// read and verify
-	for entry in reader.records() {
-		// read entry from csv file
-		let record = match entry {
-			Ok(it) => it,
-			Err(err) => {
-				eprintln!("Error: Failed to read index entry: {err}");
-				continue;
-			}
-		};
-
-		// deserialize entry
-		let entry = match record.deserialize::<IndexEntry>(Some(&header)) {
-			Ok(entry) => entry,
-			Err(err) => {
-				eprintln!("Error: Failed to deserialize row: {err}");
-				continue;
-			}
-		};
+	for row in index_data.lines().skip(1) {
+		// deserialize row
+		let split: Vec<&str> = row.split(", ").collect();
+		let path_rel = split[0];
+		let size = split[1].parse().unwrap();
+		let sha2 = split[2];
+		let crc32 = split[3].parse().unwrap();
 
 		// verify it
-		let path = root.join(&*entry.path);
+		let path = root.join(path_rel.clone());
 
 		if !path.exists() {
-			reports.push(Report(entry.path, "Entry doesn't exist on disk."));
+			reports.push(Report(path_rel.clone(), "Entry doesn't exist on disk."));
 			continue;
 		}
 
 		let Ok(data) = std::fs::read(path) else {
-			reports.push(Report(entry.path, "Failed to read file."));
+			reports.push(Report(path_rel.clone(), "Failed to read file."));
 			continue;
 		};
 
-		if data.len() != entry.size {
-			reports.push(Report(entry.path, "Sizes don't match."));
+		if data.len() != size {
+			reports.push(Report(path_rel.clone(), "Sizes don't match."));
 			continue;
 		}
 
 		let mut sha256er = sha2::Sha256::new();
 		sha256er.update(&data);
-		if format!("{:x}", sha256er.finalize()).as_str() != &*entry.sha2 {
-			reports.push(Report(entry.path.clone(), "Content crc32 doesn't match."));
+		if format!("{:x}", sha256er.finalize()).as_str() != &*sha2 {
+			reports.push(Report(path_rel.clone(), "Content crc32 doesn't match."));
 		}
 
 		let mut crc32er = crc32fast::Hasher::new();
 		crc32er.update(data.as_slice());
-		if crc32er.finalize() != entry.crc32 {
-			reports.push(Report(entry.path.clone(), "Content crc32 doesn't match."));
+		if crc32er.finalize() != crc32 {
+			reports.push(Report(path_rel.clone(), "Content crc32 doesn't match."));
 		}
 
-		println!("Info: Processed entry `{}`", entry.path);
+		println!("Info: Processed entry `{}`", path_rel);
 		count += 1;
 	}
 
-	for report in reports {
+	for report in &reports {
 		eprintln!( "In file `{}`: {}", report.0, report.1 );
 	}
 
-	println!("Info: Verified {count} files in {}s!", start.elapsed().as_secs());
+	println!("Info: Verified {count} files in {}s with {} errors!", start.elapsed().as_secs(), reports.len());
 }
