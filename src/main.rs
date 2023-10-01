@@ -18,7 +18,6 @@ const BIN_PATH: &str = "bin/linux64";
 
 
 fn main() {
-
 	// default value, calculate new one
 	let default_root = {
 		let current_dir = std::env::current_dir().unwrap();
@@ -47,7 +46,7 @@ fn main() {
 			.long("vproject")
 			.action(ArgAction::Set)
 			.env("VPROJECT")
-			.default_value(default_root.as_str())
+			.default_value( default_root )
 		)
 		.arg(Arg::new("excluded")
 			.help("GLOB pattern(s) to exclude when creating the index")
