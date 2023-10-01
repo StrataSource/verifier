@@ -29,9 +29,9 @@ pub(crate) fn create(root: &String, index_location: &str, excluded: Vec<&String>
 	let mut count = 0u32;
 	// read and verify
 	'outer: for entry in glob::glob(&format!("{}/**/*.*", root.to_str().unwrap())).unwrap() {
-		let path = entry.expect("aaaaa");
-		let path_str = path.to_str().expect("eeeee");
+		let path = entry.unwrap();
 
+		let path_str = path.to_str().unwrap();
 		if !path.is_file() {
 			continue;
 		}
