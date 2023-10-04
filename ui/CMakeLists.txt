@@ -5,8 +5,8 @@ project(
 		VERSION 0.1.0
 		DESCRIPTION "An UI for the verifier"
 )
-set( CMAKE_CXX_STANDARD 23 )  # sets the C++ version we use
-set( CMAKE_CXX_STANDARD_REQUIRED ON )  # makes so we _require_ the declared C++ version
+set( CMAKE_CXX_STANDARD 23 )
+set( CMAKE_CXX_STANDARD_REQUIRED ON )
 
 # if we weren't provided an install dir, set the it inside the repo dir
 if( CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT )
@@ -37,11 +37,12 @@ elseif( WIN32 )
 	cmake_policy( SET CMP0020 NEW )
 endif()
 
-set( QT_LIBS Core Gui Widgets )  # the Qt6 modules that we use
-find_package( Qt6 COMPONENTS ${QT_LIBS} REQUIRED )  # find the Qt6 package and provide the buildscript with its defines
-set( CMAKE_AUTOMOC ON )  # required for Qt to generate Q_OBJECT meta methods
-set( CMAKE_AUTORCC ON )  # required to compile resources, might not be needed, will see
-set( CMAKE_AUTOUIC ON )  # required to compile .ui files, might not be needed, will see
+# setup qt dependency
+set( QT_LIBS Core Gui Widgets )
+find_package( Qt6 COMPONENTS ${QT_LIBS} REQUIRED )
+set( CMAKE_AUTOMOC ON )
+set( CMAKE_AUTORCC ON )
+set( CMAKE_AUTOUIC ON )
 
 # the executable
 add_executable( verifier-ui
@@ -52,8 +53,10 @@ add_executable( verifier-ui
 foreach( QT_LIB ${QT_LIBS} )
 	target_link_libraries( verifier-ui PRIVATE Qt::${QT_LIB} )
 endforeach()
-target_include_directories( verifier-ui PUBLIC include )  # the directories that will be searched for files
-qt_generate_moc( TARGET verifier-ui )  # make qt generate the meta methods
+target_include_directories( verifier-ui PUBLIC include )
+
+# make qt generate the meta methods
+qt_generate_moc( TARGET verifier-ui )
 
 # setup Qt6 files for runtime, only needed for windows
 if( WIN32 AND NOT DEFINED CMAKE_TOOLCHAIN_FILE )
@@ -81,9 +84,3 @@ if( WIN32 AND NOT DEFINED CMAKE_TOOLCHAIN_FILE )
 		)
 	endforeach()
 endif()
-
-# setup the resource directory, so we can use the files within it
-add_custom_command(
-	TARGET ${PROJECT_NAME}
-	POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${PROJECT_SOURCE_DIR}/resources/" "$<TARGET_FILE_DIR:${PROJECT_NAME}>/resources"
-)
