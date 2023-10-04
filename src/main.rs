@@ -1,10 +1,13 @@
 use clap::{Arg, ArgAction, Command};
+use clap::builder::PossibleValuesParser;
 
 use crate::create::create;
+use crate::output::{JsonOutput, Output, SimpleOutput};
 use crate::verify::verify;
 
 mod verify;
 mod create;
+mod output;
 
 // correct the index path with os
 #[cfg(target_os = "windows")]
@@ -61,6 +64,14 @@ fn main() {
 			.action(ArgAction::Set)
 			.default_value(INDEX_PATH)
 		)
+		.arg(Arg::new("format")
+			.help("Output format")
+			.long("format")
+			.short('f')
+			.action(ArgAction::Set)
+			.default_value("simple")
+			.value_parser(PossibleValuesParser::new(["simple", "json"]))
+		)
 		.get_matches();
 
 	let ignored = [
@@ -72,6 +83,16 @@ fn main() {
 	let index_location = matches.get_one::<String>( "index-loc" ).unwrap();
 	let root = matches.get_one::<String>("root").unwrap();
 
+	let mut output: Box<dyn Output> = match matches.get_one::<String>( "format" ).unwrap().as_str() {
+		"simple" => SimpleOutput::new(),
+		"json" => JsonOutput::new(),
+		it => {
+			eprintln!( "Invalid `--format` argument: `{it}`" );
+			std::process::exit(1);
+		}
+	};
+	let ret: i32;
+
 	if matches.get_flag("new-index") {
 		let mut excludes = matches.get_many("excluded")
 			.map(|it| it.copied().collect())
@@ -82,8 +103,11 @@ fn main() {
 		excludes.push( &ignored[1] );
 		excludes.push( &ignored[2] );
 
-		return create(root, index_location, excludes);
+		ret = create(root, index_location, excludes, &mut *output);
+	} else {
+		ret = verify(root, index_location, &mut *output);
 	}
 
-	return verify(root, index_location);
+	output.end();
+	std::process::exit( ret );
 }

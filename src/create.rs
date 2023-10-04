@@ -1,25 +1,35 @@
 use std::io::Write;
 use std::path::PathBuf;
-use std::process::exit;
 
 use sha2::Digest;
 
-pub(crate) fn create(root: &String, index_location: &str, excluded: Vec<&String>) {
+use crate::output::{Output, OutputKind};
+
+pub(crate) fn create(root: &String, index_location: &str, excluded: Vec<&String>, out: &mut dyn Output) -> i32 {
 	let root = PathBuf::from(root);
 	let index_path = root.join(index_location);
 
 	if index_path.exists() {
-		eprintln!("Warning: Index file `{}` already exist, will be overwritten.", index_path.to_str().unwrap());
+		out.write(
+			OutputKind::Error,
+			format!("Index file `{}` already exist, will be overwritten.", index_path.to_str().unwrap())
+		);
 	}
 
-	println!("Info: Creating index file at `{}`", index_path.to_str().unwrap());
+	out.write(
+		OutputKind::Info,
+		format!("Creating index file at `{}`", index_path.to_str().unwrap())
+	);
 
 	// open index file with a writer stream
 	let mut writer = match std::fs::File::create(index_path) {
 		Ok(writer) => writer,
 		Err(err) => {
-			eprintln!("Error: Failed to open index file for writing: {err}");
-			exit(1);
+			out.write(
+				OutputKind::Error,
+				format!("Failed to open index file for writing: {err}")
+			);
+			return 1;
 		}
 	};
 
@@ -75,4 +85,5 @@ pub(crate) fn create(root: &String, index_location: &str, excluded: Vec<&String>
 	}
 
 	println!("Info: Finished processing {count} files in {}s!", start.elapsed().as_secs());
+	0
 }
