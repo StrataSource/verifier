@@ -20,7 +20,11 @@ int main( int argc, char* argv[] ) {
 	return QApplication::exec();
 }
 
-MainWindow::MainWindow() : QMainWindow( nullptr ) {
+MainWindow::MainWindow() : QMainWindow() {
+    this->setWindowTitle(tr("Verifier"));
+    this->setWindowIcon(QIcon(":/icon.png"));
+    this->setMinimumSize(320, 240);
+
 	{ // Build the menu bar
 		auto fileMenu = this->menuBar()->addMenu( "File" );
 		auto exportReport = new QAction( "Export Report" );
