@@ -5,14 +5,14 @@
 
 #include <QAction>
 #include <QApplication>
-#include <QMenuBar>
 #include <QBoxLayout>
+#include <QMenuBar>
 #include <iostream>
 
 int main( int argc, char* argv[] ) {
 	QApplication app{ argc, argv };
-	QApplication::setApplicationName("verifier-ui");
-	QApplication::setApplicationVersion("0.1.0");
+	QApplication::setApplicationName( "verifier-ui" );
+	QApplication::setApplicationVersion( "0.1.0" );
 
 	auto window = new MainWindow();
 	window->show();
@@ -21,11 +21,11 @@ int main( int argc, char* argv[] ) {
 }
 
 MainWindow::MainWindow() : QMainWindow() {
-    this->setWindowTitle(tr("Verifier"));
-    this->setWindowIcon(QIcon(":/icon.png"));
-    this->setMinimumSize(320, 240);
+	this->setWindowTitle( tr( "Verifier" ) );
+	this->setWindowIcon( QIcon( ":/icon.png" ) );
+	this->setMinimumSize( 320, 240 );
 
-	{ // Build the menu bar
+	{// Build the menu bar
 		auto fileMenu = this->menuBar()->addMenu( "File" );
 		auto exportReport = new QAction( "Export Report" );
 		connect( exportReport, &QAction::triggered, this, &MainWindow::onExportReport );
@@ -39,21 +39,20 @@ MainWindow::MainWindow() : QMainWindow() {
 		auto exit = new QAction( "Exit" );
 		connect( exit, &QAction::triggered, this, &MainWindow::onExit );
 		fileMenu->addAction( exit );
-	}
-	;
-	{ // Build the layout
-		auto layout = new QBoxLayout(QBoxLayout::Direction::TopToBottom);
+	};
+	{// Build the layout
+		auto layout = new QBoxLayout( QBoxLayout::Direction::TopToBottom );
 
-		this->setLayout(layout);
+		this->setLayout( layout );
 	}
 }
 
 void MainWindow::onExportReport( bool checked ) {
-	std::cout << "onExportReport\n";
+	std::cout << "onExportReport" << std::endl;
 }
 
 void MainWindow::onGenerateManifest( bool checked ) {
-	std::cout << "onGenerateManifest\n";
+	std::cout << "onGenerateManifest" << std::endl;
 }
 
 void MainWindow::onExit( bool checked ) {
