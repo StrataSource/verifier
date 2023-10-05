@@ -1,86 +1,96 @@
 cmake_minimum_required(VERSION 3.24)
-project(
-	verifier-ui
-		LANGUAGES CXX
-		VERSION 0.1.0
-		DESCRIPTION "An UI for the verifier"
-)
-set( CMAKE_CXX_STANDARD 23 )
-set( CMAKE_CXX_STANDARD_REQUIRED ON )
+project(verifier_ui
+		DESCRIPTION "A UI for the verifier."
+		VERSION 0.1.0)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# if we weren't provided an install dir, set the it inside the repo dir
-if( CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT )
-	set( CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/install" CACHE PATH "..." FORCE )
+# RPath for Linux
+set(CMAKE_SKIP_BUILD_RPATH FALSE)
+set(CMAKE_BUILD_RPATH_USE_ORIGIN TRUE)
+set(CMAKE_INSTALL_RPATH $ORIGIN)
+
+# Qt
+if(WIN32 AND NOT DEFINED QT_BASEDIR)
+	message(FATAL_ERROR "Please define your QT install dir with -DQT_BASEDIR=\"C:/your/qt6/here\"")
+endif()
+if(DEFINED QT_BASEDIR)
+	string(REPLACE "\\" "/" QT_BASEDIR "${QT_BASEDIR}")
+
+	# Add it to the prefix path so find_package can find it
+	list(APPEND CMAKE_PREFIX_PATH "${QT_BASEDIR}")
+	set(QT_INCLUDE "${QT_BASEDIR}/include")
+	message(STATUS "Using ${QT_INCLUDE} as the Qt include directory")
 endif()
 
-# platform-specific setup
-if( UNIX )
-	set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC" )
-	set( QT_INCLUDE "/usr/include/x86_64-linux-gnu/qt6" )
-
-	if( DEFINED QT_BASEDIR )
-		set( CMAKE_PREFIX_PATH "${QT_BASEDIR}/lib/cmake" )
+if(WIN32)
+	if(CMAKE_BUILD_TYPE MATCHES Debug)
+		set(QT_LIB_SUFFIX "d" CACHE STRING "" FORCE)
 	else()
-		# On Unix, the install dir may not be specified, as it's standardized
-		set( QT_BASEDIR "$ENV{HOME}/Qt/6.4.1/gcc_64/" )
+		set(QT_LIB_SUFFIX "" CACHE STRING "" FORCE)
 	endif()
-elseif( WIN32 )
-	if( NOT DEFINED QT_BASEDIR )
-		# On Windows, the install dir must be specified, as it's not standardized
-		message( FATAL_ERROR "--!@ Please define your QT install dir with -DQT_BASEDIR=C:/your/qt6/here" )
-	endif()
-
-	# Add `QT_BASEDIR` to the prefix path so `find_package` can find it
-	list( APPEND CMAKE_PREFIX_PATH ${QT_BASEDIR} )
-	set( QT_INCLUDE ${QT_BASEDIR}/include )
-	# CMake has an odd policy that links a special link lib for Qt on newer versions of CMake.
-	cmake_policy( SET CMP0020 NEW )
 endif()
 
-# setup qt dependency
-set( QT_LIBS Core Gui Widgets )
-find_package( Qt6 COMPONENTS ${QT_LIBS} REQUIRED )
-set( CMAKE_AUTOMOC ON )
-set( CMAKE_AUTORCC ON )
-set( CMAKE_AUTOUIC ON )
+# CMake has an odd policy that links a special link lib for Qt on newer versions of CMake
+cmake_policy(SET CMP0020 NEW)
 
-# the executable
-add_executable( verifier-ui
-	src/main.cpp
-)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTOUIC ON)
+set(CMAKE_AUTORCC ON)
 
-# setup libraries we link to
-foreach( QT_LIB ${QT_LIBS} )
-	target_link_libraries( verifier-ui PRIVATE Qt::${QT_LIB} )
-endforeach()
-target_include_directories( verifier-ui PUBLIC include )
+# Add sources and create executable
+list(APPEND ${PROJECT_NAME}_SOURCES
+		"${CMAKE_CURRENT_LIST_DIR}/res/res.qrc"
+		"${CMAKE_CURRENT_LIST_DIR}/src/main.cpp"
+		"${CMAKE_CURRENT_LIST_DIR}/src/main.hpp")
+if(WIN32)
+	list(APPEND ${PROJECT_NAME}_SOURCES
+			"${CMAKE_CURRENT_LIST_DIR}/res/icon.rc")
+endif()
 
-# make qt generate the meta methods
-qt_generate_moc( TARGET verifier-ui )
+add_executable(
+		${PROJECT_NAME} WIN32
+		${${PROJECT_NAME}_SOURCES})
 
-# setup Qt6 files for runtime, only needed for windows
-if( WIN32 AND NOT DEFINED CMAKE_TOOLCHAIN_FILE )
-	set( DEBUG_SUFFIX )
-	# only set the debug suffix if we're in debug and using MSVC
-	if( MSVC AND CMAKE_BUILD_TYPE MATCHES "Debug" )
-		set( DEBUG_SUFFIX "d" )
-	endif()
+# Final Qt setup
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
+target_link_libraries(${PROJECT_NAME} PRIVATE Qt::Core Qt::Gui Qt::Widgets)
+target_include_directories(
+		${PROJECT_NAME} PRIVATE
+		"${QT_INCLUDE}"
+		"${QT_INCLUDE}/QtCore"
+		"${QT_INCLUDE}/QtGui"
+		"${QT_INCLUDE}/QtWidgets")
+if(WIN32 AND MSVC)
+	target_link_options(
+			${PROJECT_NAME} PRIVATE
+			"/ENTRY:mainCRTStartup")
+endif()
 
-	# copy all libraries to the binaries directory
-	if( EXISTS "${QT_BASEDIR}/plugins/platforms/qwindows${DEBUG_SUFFIX}.dll" )
-		add_custom_command(
-			TARGET ${PROJECT_NAME} POST_BUILD
-			COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:${PROJECT_NAME}>/plugins/platforms/"
-		)
-		add_custom_command(
-			TARGET ${PROJECT_NAME} POST_BUILD
-			COMMAND ${CMAKE_COMMAND} -E copy "${QT_BASEDIR}/plugins/platforms/qwindows${DEBUG_SUFFIX}.dll" "$<TARGET_FILE_DIR:${PROJECT_NAME}>/plugins/platforms/"
-		)
-	endif()
-	foreach( QT_LIB ${QT_LIBS} OpenGLWidgets OpenGL )
-		add_custom_command(
-			TARGET ${PROJECT_NAME} POST_BUILD
-			COMMAND ${CMAKE_COMMAND} -E copy "${QT_BASEDIR}/bin/Qt6${QT_LIB}${DEBUG_SUFFIX}.dll" "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
-		)
-	endforeach()
+# Copy these so the user doesn't have to
+if(WIN32)
+	configure_file("${QT_BASEDIR}/bin/Qt6Core${QT_LIB_SUFFIX}.dll"    "${CMAKE_BINARY_DIR}/Qt6Core${QT_LIB_SUFFIX}.dll"    COPYONLY)
+	configure_file("${QT_BASEDIR}/bin/Qt6Gui${QT_LIB_SUFFIX}.dll"     "${CMAKE_BINARY_DIR}/Qt6Gui${QT_LIB_SUFFIX}.dll"     COPYONLY)
+	configure_file("${QT_BASEDIR}/bin/Qt6Widgets${QT_LIB_SUFFIX}.dll" "${CMAKE_BINARY_DIR}/Qt6Widgets${QT_LIB_SUFFIX}.dll" COPYONLY)
+
+	configure_file("${QT_BASEDIR}/plugins/platforms/qwindows${QT_LIB_SUFFIX}.dll" "${CMAKE_BINARY_DIR}/platforms/qwindows${QT_LIB_SUFFIX}.dll" COPYONLY)
+	configure_file("${QT_BASEDIR}/plugins/styles/qwindowsvistastyle${QT_LIB_SUFFIX}.dll" "${CMAKE_BINARY_DIR}/styles/qwindowsvistastyle${QT_LIB_SUFFIX}.dll" COPYONLY)
+elseif(UNIX)
+	configure_file("${QT_BASEDIR}/lib/libQt6Core.so.6"    "${CMAKE_BINARY_DIR}/libQt6Core.so.6"    COPYONLY)
+	configure_file("${QT_BASEDIR}/lib/libQt6Gui.so.6"     "${CMAKE_BINARY_DIR}/libQt6Gui.so.6"     COPYONLY)
+	configure_file("${QT_BASEDIR}/lib/libQt6Widgets.so.6" "${CMAKE_BINARY_DIR}/libQt6Widgets.so.6" COPYONLY)
+	configure_file("${QT_BASEDIR}/lib/libQt6DBus.so.6"    "${CMAKE_BINARY_DIR}/libQt6DBus.so.6"    COPYONLY)
+
+	configure_file("${QT_BASEDIR}/lib/libQt6WaylandClient.so.6" "${CMAKE_BINARY_DIR}/libQt6WaylandClient.so.6" COPYONLY)
+	configure_file("${QT_BASEDIR}/lib/libQt6XcbQpa.so.6"        "${CMAKE_BINARY_DIR}/libQt6XcbQpa.so.6"        COPYONLY)
+	configure_file("${QT_BASEDIR}/lib/libicui18n.so.56"         "${CMAKE_BINARY_DIR}/libicui18n.so.56"         COPYONLY)
+	configure_file("${QT_BASEDIR}/lib/libicuuc.so.56"           "${CMAKE_BINARY_DIR}/libicuuc.so.56"           COPYONLY)
+	configure_file("${QT_BASEDIR}/lib/libicudata.so.56"         "${CMAKE_BINARY_DIR}/libicudata.so.56"         COPYONLY)
+
+	configure_file("${QT_BASEDIR}/plugins/platforms/libqwayland-generic.so"          "${CMAKE_BINARY_DIR}/platforms/libqwayland-generic.so"          COPYONLY)
+	configure_file("${QT_BASEDIR}/plugins/platforms/libqminimal.so"                  "${CMAKE_BINARY_DIR}/platforms/libqminimal.so"                  COPYONLY)
+	configure_file("${QT_BASEDIR}/plugins/platforms/libqxcb.so"                      "${CMAKE_BINARY_DIR}/platforms/libqxcb.so"                      COPYONLY)
+	configure_file("${QT_BASEDIR}/plugins/platformthemes/libqgtk3.so"                "${CMAKE_BINARY_DIR}/platformthemes/libqgtk3.so"                COPYONLY)
+	configure_file("${QT_BASEDIR}/plugins/wayland-shell-integration/libxdg-shell.so" "${CMAKE_BINARY_DIR}/wayland-shell-integration/libxdg-shell.so" COPYONLY)
+	configure_file("${QT_BASEDIR}/plugins/wayland-shell-integration/libqt-shell.so"  "${CMAKE_BINARY_DIR}/wayland-shell-integration/libqt-shell.so"  COPYONLY)
 endif()

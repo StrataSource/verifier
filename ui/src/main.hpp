@@ -3,15 +3,14 @@
 //
 #pragma once
 
-#include <QApplication>
 #include <QMainWindow>
 
 class MainWindow : public QMainWindow {
-	Q_OBJECT
+	Q_OBJECT;
 public:
 	MainWindow();
 public:
 	void onExportReport( bool checked );
 	void onGenerateManifest( bool checked );
 	void onExit( bool checked );
-}
+};

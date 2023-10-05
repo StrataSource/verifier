@@ -1,8 +1,12 @@
 //
 // Created by ENDERZOMBI102 on 04/10/2023.
 //
-#include <QBoxLayout>
+#include "main.hpp"
+
 #include <QAction>
+#include <QApplication>
+#include <QMenuBar>
+#include <QBoxLayout>
 #include <iostream>
 
 int main( int argc, char* argv[] ) {
@@ -16,9 +20,13 @@ int main( int argc, char* argv[] ) {
 	return QApplication::exec();
 }
 
-MainWindow::MainWindow() : QMainWindow( "Verifier" ) {
+MainWindow::MainWindow() : QMainWindow() {
+    this->setWindowTitle(tr("Verifier"));
+    this->setWindowIcon(QIcon(":/icon.png"));
+    this->setMinimumSize(320, 240);
+
 	{ // Build the menu bar
-		auto fileMenu = window->menuBar()->addMenu( "File" );
+		auto fileMenu = this->menuBar()->addMenu( "File" );
 		auto exportReport = new QAction( "Export Report" );
 		connect( exportReport, &QAction::triggered, this, &MainWindow::onExportReport );
 		fileMenu->addAction( exportReport );
@@ -36,16 +44,18 @@ MainWindow::MainWindow() : QMainWindow( "Verifier" ) {
 	{ // Build the layout
 		auto layout = new QBoxLayout(QBoxLayout::Direction::TopToBottom);
 
-		window->setLayout(layout);
+		this->setLayout(layout);
 	}
 }
 
 void MainWindow::onExportReport( bool checked ) {
 	std::cout << "onExportReport\n";
 }
+
 void MainWindow::onGenerateManifest( bool checked ) {
 	std::cout << "onGenerateManifest\n";
 }
+
 void MainWindow::onExit( bool checked ) {
 	QApplication::closeAllWindows();
 }
