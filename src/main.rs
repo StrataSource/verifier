@@ -2,7 +2,7 @@ use clap::{Arg, ArgAction, Command};
 use clap::builder::PossibleValuesParser;
 
 use crate::create::create;
-use crate::output::{JsonOutput, Output, SimpleOutput};
+use crate::output::{CsvOutput, JsonOutput, Output, SimpleOutput};
 use crate::verify::verify;
 
 mod verify;
@@ -70,7 +70,7 @@ fn main() {
 			.short('f')
 			.action(ArgAction::Set)
 			.default_value("simple")
-			.value_parser(PossibleValuesParser::new(["simple", "json"]))
+			.value_parser(PossibleValuesParser::new(["simple", "json", "csv"]))
 		)
 		.get_matches();
 
@@ -86,6 +86,7 @@ fn main() {
 	let mut output: Box<dyn Output> = match matches.get_one::<String>( "format" ).unwrap().as_str() {
 		"simple" => SimpleOutput::new(),
 		"json" => JsonOutput::new(),
+		"csv" => CsvOutput::new(),
 		it => {
 			eprintln!( "Invalid `--format` argument: `{it}`" );
 			std::process::exit(1);
@@ -93,6 +94,7 @@ fn main() {
 	};
 	let ret: i32;
 
+	output.init();
 	if matches.get_flag("new-index") {
 		let mut excludes = matches.get_many("excluded")
 			.map(|it| it.copied().collect())
@@ -107,7 +109,7 @@ fn main() {
 	} else {
 		ret = verify(root, index_location, &mut *output);
 	}
-
 	output.end();
+
 	std::process::exit( ret );
 }
