@@ -15,38 +15,38 @@
 #include <QProcess>
 
 #include "MainWindow.hpp"
-#include "ReportTableModel.hpp"
 
 MainWindow::MainWindow() : QMainWindow() {
 	this->setWindowTitle( tr( "Verifier" ) );
 	this->setWindowIcon( QIcon( ":/icon.png" ) );
 	this->setMinimumSize( 640, 320 );
-	this->statusBar()->showMessage( "Status: idle" );
+	this->statusLabel = new QLabel( "Status: idle", this );
+	this->statusBar()->addPermanentWidget( this->statusLabel );
 
 	{// Build the menu bar
 		auto fileMenu = this->menuBar()->addMenu( "File" );
-		auto exportReport = new QAction( "Export Report", this );
-		connect(exportReport, &QAction::triggered, this, &MainWindow::onExportReport );
-		fileMenu->addAction( exportReport );
+		this->exportReportAction = new QAction( "Export Report", this );
+		connect( exportReportAction, &QAction::triggered, this, &MainWindow::onExportReport );
+		fileMenu->addAction( exportReportAction );
 
-		auto generateManifest = new QAction( "Generate Manifest", this );
-		connect(generateManifest, &QAction::triggered, this, &MainWindow::onGenerateManifest );
-		fileMenu->addAction( generateManifest );
+		this->generateManifestAction = new QAction( "Generate Manifest", this );
+		connect( generateManifestAction, &QAction::triggered, this, &MainWindow::onGenerateManifest );
+		fileMenu->addAction( generateManifestAction );
 
-		auto verifyFiles = new QAction( "Verify Files", this );
-		connect(verifyFiles, &QAction::triggered, this, &MainWindow::onVerifyFiles );
-		fileMenu->addAction( verifyFiles );
+		this->verifyFilesAction = new QAction( "Verify Files", this );
+		connect( verifyFilesAction, &QAction::triggered, this, &MainWindow::onVerifyFiles );
+		fileMenu->addAction( verifyFilesAction );
 
 		fileMenu->addSeparator();
 		auto exit = new QAction( "Exit", this );
-		connect(exit, &QAction::triggered, this, &MainWindow::onExit );
+		connect(exit, &QAction::triggered, this, [](bool checked) -> void { QApplication::closeAllWindows(); } );
 		fileMenu->addAction( exit );
 	};
 	{// Build the layout
 		this->setCentralWidget( new QWidget( this ) );
 		auto layout = new QBoxLayout( QBoxLayout::Direction::TopToBottom, this->centralWidget() );
 
-		this->summaryLabel = new QLabel( "Discrepancies", this->centralWidget() );
+		this->summaryLabel = new QLabel( "Differences", this->centralWidget() );
 		layout->addWidget( this->summaryLabel );
 		this->reportTable = new QTableView( this->centralWidget() );
 		this->reportTable->setModel( &this->reportTableModel );
@@ -57,8 +57,23 @@ MainWindow::MainWindow() : QMainWindow() {
 
 			sublayout->addWidget( new QLabel( "Project  Path", this->centralWidget() ) );
 
+			auto exeDirPath = QApplication::applicationDirPath();
+
+			#if defined( DEBUG )
+				auto path = QString( "C:/Program Files (x86)/Steam/steamapps/common/Portal 2 Community Edition" );
+			#else
+				auto path = QString{};
+			#endif
+
+			if ( exeDirPath.endsWith( BIN_FOLDER ) )
+				path = QString::fromStdWString( std::filesystem::path( exeDirPath.toStdWString() )
+					.parent_path() // win64 -> bin
+					.parent_path() // bin -> root
+					.generic_wstring()
+				);
+
 			this->projectPath = new QLineEdit( this->centralWidget() );
-			this->projectPath->setText( "C:/Program Files (x86)/Steam/steamapps/common/Portal 2 Community Edition" );
+			this->projectPath->setText( path );
 			sublayout->addWidget( this->projectPath );
 
 			layout->addLayout( sublayout );
@@ -103,17 +118,22 @@ void MainWindow::onExportReport( bool checked ) {
 }
 
 void MainWindow::onGenerateManifest( bool checked ) {
+	this->lock();
 	auto proc = new QProcess( this );
 	connect(
 		proc, &QProcess::finished, this,
 		[&](int exitCode, QProcess::ExitStatus exitStatus) -> void {
-//			this->reportList->append( "finished(" + QString::number(exitCode) + ", " + QString::number(exitStatus) + ")" );
+			this->statusLabel->setText( "Status: finished (exit code " + QString::number(exitCode) + ")" );
+			this->unlock();
 		}
 	);
-
+	connect(
+		proc, &QProcess::readyReadStandardError, this,
+		[=, this]() -> void { this->statusLabel->setText( proc->readAllStandardError() ); }  // clazy:exclude=lambda-in-connect
+	);
 	connect(
 		proc, &QProcess::readyReadStandardOutput, this,
-		[=, this]() -> void {
+		[&]() -> void {
 //			this->reportList->append( "readyReadStandardOutput" );
 //			this->reportList->append( proc->readAllStandardOutput() );
 		}
@@ -121,77 +141,71 @@ void MainWindow::onGenerateManifest( bool checked ) {
 	proc->setProgram( getVerifierPath() );
 
 	// Setup arguments
-	QStringList arguments{ "--new-index", "-f", "csv" };
+	QStringList arguments{ "--new-index", "-f", "csv", "--root", this->projectPath->text() };
 	if ( this->manifestPath->text() != "default" )
 		arguments.append( { "-i", this->manifestPath->text() } );
 	proc->setArguments( arguments );
-
-	// Add the VPROJECT environment variable
-	auto env = QProcessEnvironment::systemEnvironment();
-	env.insert( "VPROJECT", this->projectPath->text() );
-	proc->setProcessEnvironment(env);
 
 	proc->start();
 }
 
 void MainWindow::onVerifyFiles( bool checked ) {
+	if ( this->projectPath->text().isEmpty() ) {
+		// TODO: Add message box with error
+	}
+	// TODO: Ditto as above but for manifestPath
+
 	this->reportTableModel.clear();
+	this->lock();
 	const auto proc = new QProcess( this );
 
 	connect(
 		proc, &QProcess::finished, this,
-		[&](int exitCode, QProcess::ExitStatus exitStatus) -> void {
-			//			this->reportList->append( "finished(" + QString::number(exitCode) + ", " + QString::number(exitStatus) + ")" );
+		[=, this](int exitCode, QProcess::ExitStatus exitStatus) -> void {
+			this->statusLabel->setText( "Status: finished (exit code " + QString::number(exitCode) + ")" );
+			this->unlock();
 		}
 	);
 	connect(
 		proc, &QProcess::readyReadStandardError, this,
 		[=, this]() -> void {
-			this->statusBar()->showMessage( proc->readAllStandardError() );
+			this->statusLabel->setText( proc->readAllStandardError() );  // clazy:exclude=lambda-in-connect
 		}
 	);
 	connect(
 		proc, &QProcess::readyReadStandardOutput, this,
 		[=, this]() -> void {
-			const auto line = proc->readAllStandardOutput();
+			const auto lines = proc->readAllStandardOutput();
 
-			// skip header
-			if ( line.startsWith("ty") )
-				return;
+			for ( const auto& line : lines.split('\n') ) {
+				// skip header
+				if ( line.startsWith( "ty" ) || line.isEmpty() )
+					continue;
 
-			const auto parts = splitOutputLine( line );
+				// `[type,context,message,got?,expected?]` where `got` and `expected` are present if `type` is `report`
+				const auto parts = splitOutputLine( line );
 
-			// reports should be put in the table, while messages in the status bar
-			if ( parts[0] == "report" )
-				this->reportTableModel.pushReport( parts[1], parts[3], parts[4] );
-			else
-				this->statusBar()->showMessage( parts[2] );
+				// reports should be put in the table, while messages in the status bar
+				if ( parts[ 0 ] == "report" )
+					this->reportTableModel.pushReport( parts[ 1 ], parts[ 3 ], parts[ 4 ] );
+				else
+					this->statusLabel->setText( parts[ 2 ] );
+			}
 		}
 	);
 	proc->setProgram( getVerifierPath() );
 
 	// Setup arguments
-	QStringList arguments{ "-f", "csv" };
+	QStringList arguments{ "-f", "csv", "--root", this->projectPath->text() };
 	if ( this->manifestPath->text() != "default" )
 		arguments.append( { "-i", this->manifestPath->text() } );
 	proc->setArguments( arguments );
 
-	// Add the VPROJECT environment variable
-	auto env = QProcessEnvironment::systemEnvironment();
-	env.insert( "VPROJECT", this->projectPath->text() );
-	proc->setProcessEnvironment(env);
-
 	proc->start();
 }
 
-void MainWindow::onExit( bool checked ) {
-	QApplication::closeAllWindows();
-}
-
 QString MainWindow::getVerifierPath() {
-	auto folder = QApplication::arguments()[0];
-	folder.resize( folder.lastIndexOf( DIVIDER ) );
-	auto verifierExe = folder + "/verifier" EXEC_SUFFIX;
+	auto verifierExe = QApplication::applicationDirPath() + "/verifier" EXEC_SUFFIX;
 
 	// does this exist?
 	if ( QFile::exists( verifierExe ) )
@@ -202,7 +216,7 @@ QString MainWindow::getVerifierPath() {
 		return "./verifier" EXEC_SUFFIX;
 
 	// found nothing...
-	return "";
+	return {};
 }
 
 QStringList MainWindow::splitOutputLine( const QString& line ) {
@@ -220,4 +234,16 @@ QStringList MainWindow::splitOutputLine( const QString& line ) {
 	}
 
 	return parts;
+}
+
+void MainWindow::lock() {
+	this->exportReportAction->setEnabled( false );
+	this->generateManifestAction->setEnabled( false );
+	this->verifyFilesAction->setEnabled( false );
+}
+
+void MainWindow::unlock() {
+	this->exportReportAction->setEnabled( true );
+	this->generateManifestAction->setEnabled( true );
+	this->verifyFilesAction->setEnabled( true );
 }

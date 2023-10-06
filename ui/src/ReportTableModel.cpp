@@ -50,6 +50,10 @@ void ReportTableModel::pushReport( QString filename, QString found, QString expe
 	endInsertRows();
 }
 void ReportTableModel::clear() {
+	// avoid a crash given by removing zero rows
+	if ( this->reports.empty() )
+		return;
+
 	beginRemoveRows( QModelIndex(), 0, static_cast<int>( this->reports.size() ) );
 
 		this->reports.clear();
