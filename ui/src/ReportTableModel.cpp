@@ -8,7 +8,7 @@
 
 
 int ReportTableModel::rowCount( const QModelIndex& parent ) const {
-	return this->reports.count();
+	return static_cast<int>( this->reports.count() );
 }
 
 QVariant ReportTableModel::data( const QModelIndex& index, int role ) const {
@@ -30,24 +30,29 @@ int ReportTableModel::columnCount( const QModelIndex& parent ) const {
 }
 
 QVariant ReportTableModel::headerData( int section, Qt::Orientation orientation, int role ) const {
-	if ( role != Qt::DisplayRole )
+	if ( role != Qt::DisplayRole || orientation != Qt::Orientation::Horizontal )
 		return {};
 
-	if ( orientation == Qt::Orientation::Horizontal )
-		switch ( section ) {
-			case 0: return "File name";
-			case 1: return "Found";
-			case 2: return "Expected";
-		}
-
-	return {};
+	switch ( section ) {
+		case 0: return "File name";
+		case 1: return "Found";
+		case 2: return "Expected";
+		default: return {};
+	}
 }
 
 void ReportTableModel::pushReport( QString filename, QString found, QString expected ) {
-	const auto newRow = this->reports.size();
-	beginInsertRows( QModelIndex(),newRow,newRow );
+	const auto newRow = static_cast<int>( this->reports.size() );
+	beginInsertRows( QModelIndex(), newRow, newRow );
 
-	this->reports.append({ std::move(filename), std::move(found), std::move(expected) });
+		this->reports.append({ std::move(filename), std::move(found), std::move(expected) });
+
+	endInsertRows();
+}
+void ReportTableModel::clear() {
+	beginRemoveRows( QModelIndex(), 0, static_cast<int>( this->reports.size() ) );
+
+		this->reports.clear();
 
 	endInsertRows();
 }

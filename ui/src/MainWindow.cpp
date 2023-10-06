@@ -8,6 +8,7 @@
 #include <QDialog>
 #include <QFileDialog>
 #include <QPushButton>
+#include <QStatusBar>
 #include <QLineEdit>
 #include <QLabel>
 #include <QMenuBar>
@@ -20,6 +21,7 @@ MainWindow::MainWindow() : QMainWindow() {
 	this->setWindowTitle( tr( "Verifier" ) );
 	this->setWindowIcon( QIcon( ":/icon.png" ) );
 	this->setMinimumSize( 640, 320 );
+	this->statusBar()->showMessage( "Status: idle" );
 
 	{// Build the menu bar
 		auto fileMenu = this->menuBar()->addMenu( "File" );
@@ -44,7 +46,7 @@ MainWindow::MainWindow() : QMainWindow() {
 		this->setCentralWidget( new QWidget( this ) );
 		auto layout = new QBoxLayout( QBoxLayout::Direction::TopToBottom, this->centralWidget() );
 
-		this->summaryLabel = new QLabel( "Differences", this->centralWidget() );
+		this->summaryLabel = new QLabel( "Discrepancies", this->centralWidget() );
 		layout->addWidget( this->summaryLabel );
 		this->reportTable = new QTableView( this->centralWidget() );
 		this->reportTable->setModel( &this->reportTableModel );
@@ -101,23 +103,11 @@ void MainWindow::onExportReport( bool checked ) {
 }
 
 void MainWindow::onGenerateManifest( bool checked ) {
-	auto proc = new QProcess{ this };
+	auto proc = new QProcess( this );
 	connect(
 		proc, &QProcess::finished, this,
 		[&](int exitCode, QProcess::ExitStatus exitStatus) -> void {
 //			this->reportList->append( "finished(" + QString::number(exitCode) + ", " + QString::number(exitStatus) + ")" );
-		}
-	);
-	connect(
-		proc, &QProcess::errorOccurred, this,
-		[&](QProcess::ProcessError error) -> void {
-//			this->reportList->append( "errorOccurred(" + QString::number(error) + ")" );
-		}
-	);
-	connect(
-		proc, &QProcess::stateChanged, this,
-		[&](QProcess::ProcessState state) -> void {
-//			this->reportList->append( "stateChanged(" + QString::number(state) + ")" );
 		}
 	);
 
@@ -126,13 +116,6 @@ void MainWindow::onGenerateManifest( bool checked ) {
 		[=, this]() -> void {
 //			this->reportList->append( "readyReadStandardOutput" );
 //			this->reportList->append( proc->readAllStandardOutput() );
-		}
-	);
-	connect(
-		proc, &QProcess::readyReadStandardError, this,
-		[=, this]() -> void {
-//			this->reportList->append( "readyReadStandardError" );
-//			this->reportList->append( proc->readAllStandardError() );
 		}
 	);
 	proc->setProgram( getVerifierPath() );
@@ -152,14 +135,37 @@ void MainWindow::onGenerateManifest( bool checked ) {
 }
 
 void MainWindow::onVerifyFiles( bool checked ) {
-	const auto proc = new QProcess{ this };
+	this->reportTableModel.clear();
+	const auto proc = new QProcess( this );
+
+	connect(
+		proc, &QProcess::finished, this,
+		[&](int exitCode, QProcess::ExitStatus exitStatus) -> void {
+			//			this->reportList->append( "finished(" + QString::number(exitCode) + ", " + QString::number(exitStatus) + ")" );
+		}
+	);
+	connect(
+		proc, &QProcess::readyReadStandardError, this,
+		[=, this]() -> void {
+			this->statusBar()->showMessage( proc->readAllStandardError() );
+		}
+	);
 	connect(
 		proc, &QProcess::readyReadStandardOutput, this,
 		[=, this]() -> void {
 			const auto line = proc->readAllStandardOutput();
+
+			// skip header
+			if ( line.startsWith("ty") )
+				return;
+
 			const auto parts = splitOutputLine( line );
-			this->summaryLabel->setText( parts.join(";") );
-//			this->reportTableModel.pushReport(  );
+
+			// reports should be put in the table, while messages in the status bar
+			if ( parts[0] == "report" )
+				this->reportTableModel.pushReport( parts[1], parts[3], parts[4] );
+			else
+				this->statusBar()->showMessage( parts[2] );
 		}
 	);
 	proc->setProgram( getVerifierPath() );
