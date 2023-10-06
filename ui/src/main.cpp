@@ -11,7 +11,6 @@ int main( int argc, char* argv[] ) {
 	QApplication app{ argc, argv };
 	QApplication::setApplicationName( "verifier-ui" );
 	QApplication::setApplicationVersion( "0.1.0" );
-	qDebug() << "hhhhh";
 
 	auto window = new MainWindow();
 	window->show();
