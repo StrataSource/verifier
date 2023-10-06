@@ -10,7 +10,7 @@ impl CsvOutput {
 
 impl Output for CsvOutput {
 	fn init(&mut self) {
-		println!("type,kind,message,got?,expected?");
+		println!("type,context,message,got?,expected?");
 	}
 
 	fn write(&mut self, kind: OutputKind, message: String) {
