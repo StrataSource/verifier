@@ -27,7 +27,7 @@ fn main() {
 		if current_dir.ends_with(BIN_PATH) {
 			// running directly from binaries directory, set root to ../..
 			current_dir.parent().unwrap().parent().unwrap().to_str().unwrap().to_owned()
-		} else if current_dir.ends_with( "bin/" ) {
+		} else if current_dir.ends_with("bin/") {
 			current_dir.parent().unwrap().to_str().unwrap().to_owned()
 		} else {
 			current_dir.to_str().unwrap().to_owned()
@@ -49,13 +49,14 @@ fn main() {
 			.long("vproject")
 			.action(ArgAction::Set)
 			.env("VPROJECT")
-			.default_value( default_root )
+			.default_value(default_root)
 		)
 		.arg(Arg::new("excluded")
 			.help("GLOB pattern(s) to exclude when creating the index")
 			.long("exclude")
 			.short('e')
 			.action(ArgAction::Append)
+			.requires("new-index")
 		)
 		.arg(Arg::new("index-loc")
 			.help("The index file to use")
@@ -72,6 +73,13 @@ fn main() {
 			.default_value("simple")
 			.value_parser(PossibleValuesParser::new(["simple", "json", "csv"]))
 		)
+		.arg(Arg::new("overwrite")
+			.help("Do not ask for confirmation for overwriting an existing index")
+			.long("force")
+			.short('f')
+			.action(ArgAction::SetTrue)
+			.requires("new-index")
+		)
 		.get_matches();
 
 	let ignored = [
@@ -80,15 +88,15 @@ fn main() {
 		String::from("**/index.csv"),
 	];
 
-	let index_location = matches.get_one::<String>( "index-loc" ).unwrap();
+	let index_location = matches.get_one::<String>("index-loc").unwrap();
 	let root = matches.get_one::<String>("root").unwrap();
 
-	let mut output: Box<dyn Output> = match matches.get_one::<String>( "format" ).unwrap().as_str() {
+	let mut output: Box<dyn Output> = match matches.get_one::<String>("format").unwrap().as_str() {
 		"simple" => SimpleOutput::new(),
 		"json" => JsonOutput::new(),
 		"csv" => CsvOutput::new(),
 		it => {
-			eprintln!( "Invalid `--format` argument: `{it}`" );
+			eprintln!("Invalid `--format` argument: `{it}`");
 			std::process::exit(1);
 		}
 	};
@@ -100,16 +108,17 @@ fn main() {
 			.map(|it| it.copied().collect())
 			.or(Some(Vec::new()))
 			.unwrap();
+		let overwite = matches.get_flag("overwrite");
 
-		excludes.push( &ignored[0] );
-		excludes.push( &ignored[1] );
-		excludes.push( &ignored[2] );
+		excludes.push(&ignored[0]);
+		excludes.push(&ignored[1]);
+		excludes.push(&ignored[2]);
 
-		ret = create(root, index_location, excludes, &mut *output);
+		ret = create(root, index_location, excludes, overwite, &mut *output);
 	} else {
 		ret = verify(root, index_location, &mut *output);
 	}
 	output.end();
 
-	std::process::exit( ret );
+	std::process::exit(ret);
 }

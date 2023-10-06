@@ -5,20 +5,28 @@ use sha2::Digest;
 
 use crate::output::{Output, OutputKind};
 
-pub(crate) fn create(root: &String, index_location: &str, excluded: Vec<&String>, out: &mut dyn Output) -> i32 {
+pub(crate) fn create(root: &String, index_location: &str, excluded: Vec<&String>, overwrite: bool, out: &mut dyn Output) -> i32 {
 	let root = PathBuf::from(root);
 	let index_path = root.join(index_location);
 
 	if index_path.exists() {
-		out.write(
-			OutputKind::Error,
-			format!("Index file `{}` already exist, do you want to overwite it? (y/N)", index_path.to_str().unwrap())
-		);
-		let mut input = String::new();
-		std::io::stdin().read_line(&mut input).unwrap();
-		if ( input == "\n" || input.to_lowercase() == "n\n" ) {
-			out.write( OutputKind::Info, "Aborting.".into() );
-			return 1;
+		if !overwrite {
+			out.write(
+				OutputKind::Warn,
+				format!("Index file `{}` already exist, do you want to overwite it? (y/N)", index_path.to_str().unwrap()),
+			);
+			let mut input = String::new();
+			std::io::stdin().read_line(&mut input).unwrap();
+			let input = input.trim_end().to_lowercase();
+			if input.len() == 0 || input == "n" {
+				out.write(OutputKind::Info, "Aborting.".into());
+				return 1;
+			}
+		} else {
+			out.write(
+				OutputKind::Warn,
+				format!("Index file `{}` already exist, will be overwritten.", index_path.to_str().unwrap()),
+			);
 		}
 	}
 
