@@ -1,3 +1,4 @@
+use std::io::Write;
 use crate::output::{Output, OutputKind};
 
 pub struct CsvOutput;
@@ -15,9 +16,11 @@ impl Output for CsvOutput {
 
 	fn write(&mut self, kind: OutputKind, message: String) {
 		println!("\"message\",\"{kind}\",\"{message}\"");
+		std::io::stdout().flush().unwrap();
 	}
 
 	fn report(&mut self, file: &str, message: &str, got: &str, expected: &str) {
 		println!("\"report\",\"{file}\",\"{message}\",\"{got}\",\"{expected}\"");
+		std::io::stdout().flush().unwrap();
 	}
 }
