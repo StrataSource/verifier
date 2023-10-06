@@ -51,23 +51,24 @@ list(APPEND ${PROJECT_NAME}_SOURCES
 
 if(WIN32)
 	list(APPEND ${PROJECT_NAME}_SOURCES
-			"${CMAKE_CURRENT_LIST_DIR}/res/icon.rc"
+		"${CMAKE_CURRENT_LIST_DIR}/res/icon.rc"
 	)
 endif()
 
 add_executable(
-		${PROJECT_NAME} WIN32
-		${${PROJECT_NAME}_SOURCES})
+	${PROJECT_NAME} WIN32
+		${${PROJECT_NAME}_SOURCES}
+)
 
 # Final Qt setup
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
 target_link_libraries(${PROJECT_NAME} PRIVATE Qt::Core Qt::Gui Qt::Widgets)
 target_include_directories(
-		${PROJECT_NAME} PRIVATE
-			"${QT_INCLUDE}"
-			"${QT_INCLUDE}/QtCore"
-			"${QT_INCLUDE}/QtGui"
-			"${QT_INCLUDE}/QtWidgets"
+	${PROJECT_NAME} PRIVATE
+		"${QT_INCLUDE}"
+		"${QT_INCLUDE}/QtCore"
+		"${QT_INCLUDE}/QtGui"
+		"${QT_INCLUDE}/QtWidgets"
 )
 if(WIN32 AND MSVC)
 	target_link_options(
