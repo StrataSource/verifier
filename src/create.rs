@@ -12,8 +12,14 @@ pub(crate) fn create(root: &String, index_location: &str, excluded: Vec<&String>
 	if index_path.exists() {
 		out.write(
 			OutputKind::Error,
-			format!("Index file `{}` already exist, will be overwritten.", index_path.to_str().unwrap())
+			format!("Index file `{}` already exist, do you want to overwite it? (y/N)", index_path.to_str().unwrap())
 		);
+		let mut input = String::new();
+		std::io::stdin().read_line(&mut input).unwrap();
+		if ( input == "\n" || input.to_lowercase() == "n\n" ) {
+			out.write( OutputKind::Info, "Aborting.".into() );
+			return 1;
+		}
 	}
 
 	out.write(
