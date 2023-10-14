@@ -2,7 +2,7 @@ use clap::{Arg, ArgAction, Command};
 use clap::builder::PossibleValuesParser;
 
 use crate::create::create;
-use crate::output::{CsvOutput, JsonOutput, Output, SimpleOutput};
+use crate::output::Output;
 use crate::verify::verify;
 
 mod verify;
@@ -89,15 +89,7 @@ fn main() {
 	let index_location = matches.get_one::<String>("index-loc").unwrap();
 	let root = matches.get_one::<String>("root").unwrap();
 
-	let mut output: Box<dyn Output> = match matches.get_one::<String>("format").unwrap().as_str() {
-		"simple" => SimpleOutput::new(),
-		"json" => JsonOutput::new(),
-		"csv" => CsvOutput::new(),
-		it => {
-			eprintln!("Invalid `--format` argument: `{it}`");
-			std::process::exit(1);
-		}
-	};
+	let mut output: Box<dyn Output>;
 	let ret: i32;
 
 	output.init();

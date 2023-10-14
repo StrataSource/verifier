@@ -2,4 +2,4 @@ target
 run
 .idea
 Cargo.lock
-ui/cmake-build-*
+cmake-build-*

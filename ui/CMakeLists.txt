@@ -1,18 +1,15 @@
 cmake_minimum_required(VERSION 3.24)
-project(verifier_ui
-		DESCRIPTION "A UI for the verifier."
-		VERSION 0.1.0
+project( verifier_ui
+	DESCRIPTION "A UI for the verifier."
+	VERSION 0.1.0
 )
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 # RPath for Linux
-set(CMAKE_SKIP_BUILD_RPATH FALSE)
-set(CMAKE_BUILD_RPATH_USE_ORIGIN TRUE)
-set(CMAKE_INSTALL_RPATH $ORIGIN)
+set( CMAKE_SKIP_BUILD_RPATH FALSE )
+set( CMAKE_BUILD_RPATH_USE_ORIGIN TRUE )
+set( CMAKE_INSTALL_RPATH $ORIGIN )
 
 # Qt
-if(WIN32 AND NOT DEFINED QT_BASEDIR)
+if( WIN32 AND NOT DEFINED QT_BASEDIR )
 	message(FATAL_ERROR "Please define your QT install dir with -DQT_BASEDIR=\"C:/your/qt6/here\"")
 endif()
 if(DEFINED QT_BASEDIR)
