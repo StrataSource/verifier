@@ -11,7 +11,7 @@ public:
 	CsvOutput( const CsvOutput& ) = delete;
 	CsvOutput operator=( const CsvOutput& ) = delete;
 public:
-	auto init() -> void override;
-	auto write( OutputKind kind, std::string_view message ) -> void override;
-	auto report( std::string_view  file, std::string_view message, std::string_view got, std::string_view expected ) -> void override;
+	auto init( FILE* teeFile ) -> void override;
+	auto write( OutputKind kind, std::string_view message ) const -> void override;
+	auto report( std::string_view  file, std::string_view message, std::string_view got, std::string_view expected ) const -> void override;
 };

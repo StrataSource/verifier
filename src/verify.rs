@@ -51,13 +51,13 @@ pub(crate) fn verify(root: &String, index_location: &str, out: &mut dyn Output) 
 		let path = root.join(path_rel.clone());
 
 		if !path.exists() {
-			out.report(path_rel.clone(), "Entry doesn't exist on disk.", "null", "null");
+			out.report(path_rel.clone(), "Entry doesn't exist on disk.", "nul", "nul");
 			errors += 1;
 			continue;
 		}
 
 		let Ok(data) = std::fs::read(path) else {
-			out.report(path_rel.clone(), "Failed to read file.", "null", "null");
+			out.report(path_rel.clone(), "Failed to read file.", "nul", "nul");
 			errors += 1;
 			continue;
 		};
@@ -81,7 +81,7 @@ pub(crate) fn verify(root: &String, index_location: &str, out: &mut dyn Output) 
 		if sha256.as_str() != expected_sha256 {
 			out.report(
 				path_rel.clone(),
-				"Content crc32 doesn't match.",
+				"Content sha256 doesn't match.",
 				sha256.as_str(),
 				expected_sha256
 			);

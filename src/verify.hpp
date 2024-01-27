@@ -9,4 +9,4 @@
 #include "output/Output.hpp"
 
 
-auto verify( std::string_view root, std::string_view indexLocation, Output* out ) -> int;
+auto verify( std::string_view root, std::string_view indexLocation, const Output* out ) -> int;

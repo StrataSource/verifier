@@ -37,7 +37,7 @@ fn main() {
 	let matches = Command::new("install_checker")
 		.author("ENDERZOMBI102 <enderzombi102.end@gmail.com>")
 		.version("0.1.0")
-		.about("A tool used to verify a game's install")
+		.about("A tool used to verify a game's instal")
 		.arg(Arg::new("new-index")
 			.help("Creates a new index file")
 			.long("new-index")

@@ -23,6 +23,8 @@ list( APPEND ${PROJECT_NAME}_SOURCES
 	"${CMAKE_CURRENT_LIST_DIR}/src/output/JsonOutput.hpp"
 	"${CMAKE_CURRENT_LIST_DIR}/src/output/SimpleOutput.cpp"
 	"${CMAKE_CURRENT_LIST_DIR}/src/output/SimpleOutput.hpp"
+	"${CMAKE_CURRENT_LIST_DIR}/src/vendor/glob.cpp"
+	"${CMAKE_CURRENT_LIST_DIR}/src/vendor/glob.hpp"
 	"${CMAKE_CURRENT_LIST_DIR}/src/create.cpp"
 	"${CMAKE_CURRENT_LIST_DIR}/src/create.hpp"
 	"${CMAKE_CURRENT_LIST_DIR}/src/verify.cpp"
@@ -34,6 +36,7 @@ target_compile_definitions( ${PROJECT_NAME} PRIVATE $<$<CONFIG:Debug>:DEBUG> )
 
 find_package( Argumentum CONFIG REQUIRED )
 find_package( fmt CONFIG REQUIRED )
-target_link_libraries( ${PROJECT_NAME} PRIVATE Argumentum::argumentum fmt::fmt )
+find_package( unofficial-hash-library CONFIG REQUIRED )
+target_link_libraries( ${PROJECT_NAME} PRIVATE Argumentum::argumentum fmt::fmt unofficial::hash-library )
 
 add_subdirectory( ui )
