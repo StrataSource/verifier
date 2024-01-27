@@ -1,9 +1,18 @@
 {
-  "name" : "verifier",
-  "version-string" : "0.1.0",
-  "builtin-baseline" : "1384becefca5c1511f0e070c43f66ad6a3783c8e",
-  "dependencies" : [ "argumentum", "fmt", {
-    "name" : "hash-library",
-    "version>=" : "8#2"
-  } ]
+    "name": "verifier",
+    "version-string": "0.1.0",
+    "builtin-baseline": "1384becefca5c1511f0e070c43f66ad6a3783c8e",
+    "dependencies": [
+        "argumentum",
+        "fmt",
+        {
+            "name": "hash-library",
+            "version>=": "8#2"
+        },
+        {
+            "name": "qtbase",
+            "platform": "windows",
+            "version>=": "6.6.1#3"
+        }
+    ]
 }

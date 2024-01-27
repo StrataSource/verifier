@@ -1,7 +1,6 @@
 //
 // Created by ENDERZOMBI102 on 05/10/2023.
 //
-
 #pragma once
 
 #include "ReportTableModel.hpp"

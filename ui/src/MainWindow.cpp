@@ -1,7 +1,6 @@
 //
 // Created by ENDERZOMBI102 on 05/10/2023.
 //
-
 #include <QAction>
 #include <QApplication>
 #include <QBoxLayout>
@@ -20,25 +19,25 @@ MainWindow::MainWindow() : QMainWindow() {
 	this->setWindowTitle( tr( "Verifier" ) );
 	this->setWindowIcon( QIcon( ":/icon.png" ) );
 	this->setMinimumSize( 640, 320 );
-	this->statusLabel = new QLabel( "Status: idle", this );
+	this->statusLabel = new QLabel( tr( "Status: idle" ), this );
 	this->statusBar()->addPermanentWidget( this->statusLabel );
 
 	{// Build the menu bar
-		auto fileMenu = this->menuBar()->addMenu( "File" );
-		this->exportReportAction = new QAction( "Export Report", this );
+		auto fileMenu = this->menuBar()->addMenu( tr( "File" ) );
+		this->exportReportAction = new QAction( tr( "Export Report" ), this );
 		connect( exportReportAction, &QAction::triggered, this, &MainWindow::onExportReport );
 		fileMenu->addAction( exportReportAction );
 
-		this->generateManifestAction = new QAction( "Generate Manifest", this );
+		this->generateManifestAction = new QAction( tr( "Generate Manifest" ), this );
 		connect( generateManifestAction, &QAction::triggered, this, &MainWindow::onGenerateManifest );
 		fileMenu->addAction( generateManifestAction );
 
-		this->verifyFilesAction = new QAction( "Verify Files", this );
+		this->verifyFilesAction = new QAction( tr( "Verify Files" ), this );
 		connect( verifyFilesAction, &QAction::triggered, this, &MainWindow::onVerifyFiles );
 		fileMenu->addAction( verifyFilesAction );
 
 		fileMenu->addSeparator();
-		auto exit = new QAction( "Exit", this );
+		auto exit = new QAction( tr( "Exit" ), this );
 		connect(exit, &QAction::triggered, this, [](bool checked) -> void { QApplication::closeAllWindows(); } );
 		fileMenu->addAction( exit );
 	};
@@ -46,7 +45,7 @@ MainWindow::MainWindow() : QMainWindow() {
 		this->setCentralWidget( new QWidget( this ) );
 		auto layout = new QBoxLayout( QBoxLayout::Direction::TopToBottom, this->centralWidget() );
 
-		this->summaryLabel = new QLabel( "Differences", this->centralWidget() );
+		this->summaryLabel = new QLabel( tr( "Differences" ), this->centralWidget() );
 		layout->addWidget( this->summaryLabel );
 		this->reportTable = new QTableView( this->centralWidget() );
 		this->reportTable->setModel( &this->reportTableModel );
@@ -55,7 +54,7 @@ MainWindow::MainWindow() : QMainWindow() {
 		{
 			auto sublayout = new QBoxLayout( QBoxLayout::Direction::LeftToRight, this->centralWidget() );
 
-			sublayout->addWidget( new QLabel( "Project  Path", this->centralWidget() ) );
+			sublayout->addWidget( new QLabel( tr( "Project Path" ), this->centralWidget() ) );
 
 			auto exeDirPath = QApplication::applicationDirPath();
 
@@ -82,13 +81,13 @@ MainWindow::MainWindow() : QMainWindow() {
 		{
 			auto sublayout = new QBoxLayout( QBoxLayout::Direction::LeftToRight, this->centralWidget() );
 
-			sublayout->addWidget( new QLabel( "Manifest Path", this->centralWidget() ) );
+			sublayout->addWidget( new QLabel( tr( "Manifest Path" ), this->centralWidget() ) );
 
 			this->manifestPath = new QLineEdit( this->centralWidget() );
 			this->manifestPath->setText( "default" );
 			sublayout->addWidget( this->manifestPath );
 
-			const auto button = new QPushButton( "Go!", this->centralWidget() );
+			const auto button = new QPushButton( tr( "Go!" ), this->centralWidget() );
 			connect( button, &QPushButton::clicked, this, &MainWindow::onVerifyFiles );
 			sublayout->addWidget( button );
 
@@ -123,13 +122,13 @@ void MainWindow::onGenerateManifest( bool checked ) {
 	connect(
 		proc, &QProcess::finished, this,
 		[&](int exitCode, QProcess::ExitStatus exitStatus) -> void {
-			this->statusLabel->setText( "Status: finished (exit code " + QString::number(exitCode) + ")" );
+			this->statusLabel->setText( tr( "Status: finished (exit code %1)" ).arg( exitCode ) );
 			this->unlock();
 		}
 	);
 	connect(
 		proc, &QProcess::readyReadStandardError, this,
-		[=, this]() -> void { this->statusLabel->setText( proc->readAllStandardError() ); }  // clazy:exclude=lambda-in-connect
+		[=, this]() -> void { this->statusLabel->setText( proc->readAllStandardError() ); }
 	);
 	connect(
 		proc, &QProcess::readyReadStandardOutput, this,
@@ -162,15 +161,13 @@ void MainWindow::onVerifyFiles( bool checked ) {
 	connect(
 		proc, &QProcess::finished, this,
 		[=, this](int exitCode, QProcess::ExitStatus exitStatus) -> void {
-			this->statusLabel->setText( "Status: finished (exit code " + QString::number(exitCode) + ")" );
+			this->statusLabel->setText( tr( "Status: finished (exit code %1)" ).arg( exitCode ) );
 			this->unlock();
 		}
 	);
 	connect(
 		proc, &QProcess::readyReadStandardError, this,
-		[=, this]() -> void {
-			this->statusLabel->setText( proc->readAllStandardError() );  // clazy:exclude=lambda-in-connect
-		}
+		[=, this]() -> void { this->statusLabel->setText( proc->readAllStandardError() ); }
 	);
 	connect(
 		proc, &QProcess::readyReadStandardOutput, this,

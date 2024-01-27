@@ -1,7 +1,6 @@
 //
 // Created by ENDERZOMBI102 on 05/10/2023.
 //
-
 #include "ReportTableModel.hpp"
 
 #include <utility>
@@ -34,9 +33,9 @@ QVariant ReportTableModel::headerData( int section, Qt::Orientation orientation,
 		return {};
 
 	switch ( section ) {
-		case 0: return "File name";
-		case 1: return "Found";
-		case 2: return "Expected";
+		case 0: return tr( "File name" );
+		case 1: return tr( "Found" );
+		case 2: return tr( "Expected" );
 		default: return {};
 	}
 }
