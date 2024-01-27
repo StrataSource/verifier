@@ -14,12 +14,13 @@
 #include "output/SimpleOutput.hpp"
 #include "verify.hpp"
 
+// the index file is encoded as `Rows-of-String-Values`
 // correct the index path with os
 #if defined( _WIN32 )
-	const auto INDEX_PATH = "bin/win64/index.csv";
+	const auto INDEX_PATH = "bin/win64/index.rsv";
 	const auto BIN_PATH = "bin/win64/";
 #else
-	const auto INDEX_PATH = "bin/linux64/index.csv";
+	const auto INDEX_PATH = "bin/linux64/index.rsv";
 	const auto BIN_PATH = "bin/linux64";
 #endif
 
@@ -125,7 +126,7 @@ auto main( int argc, char* argv[] ) -> int {
 		std::vector<std::string> ignored{
 			"sdk_content/**/*.*",
 			"hammer/autosave/*.*",
-			"**/index.csv",
+			"**/index.rsv",
 		};
 		excludes.insert( excludes.end(), ignored.begin(), ignored.end() );
 

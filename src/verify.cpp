@@ -38,13 +38,18 @@ auto verify( std::string_view root_, std::string_view indexLocation, const Outpu
 	unsigned errors{ 0 };
 	auto start{ std::chrono::high_resolution_clock::now() };
 
-	// skip csv header
-	while ( indexStream.get() != '\n' ) ;
-
 	// read and verify
-	for ( std::string line; std::getline( indexStream, line ); ) {
+	std::stringbuf line{};
+	while (! indexStream.eof() ) {
+		line.pubseekpos( 0 );
+		// read row data
+		indexStream.get( line, '\xFD' );
+		indexStream.get(); // value end separator
+		if ( line.in_avail() == 0 )
+			break;
+
+		const auto split{ splitString( line.str(), "\xFF" ) };
 		// deserialize row
-		const auto split{ splitString( line, ", " ) };
 		const auto& pathRel{ split[ 0 ] };
 		const auto expectedSize{ strtoull( split[ 1 ].c_str(), nullptr, 10 ) };
 		const auto& expectedSha256{ split[ 2 ] };

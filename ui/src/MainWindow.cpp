@@ -105,9 +105,9 @@ void MainWindow::onExportReport( bool checked ) {
 	diag.setModal( true );
 	diag.setFilter( QDir::Filter::Writable | QDir::Filter::Files );
 	diag.setFileMode( QFileDialog::FileMode::AnyFile );
-	diag.setDefaultSuffix( "index.csv" );
-	diag.selectFile( "./index.csv" );
-	diag.setNameFilter( "*.csv" );
+	diag.setDefaultSuffix( "index.rsv" );
+	diag.selectFile( "./index.rsv" );
+	diag.setNameFilter( "*.rsv" );
 	diag.setAcceptMode( QFileDialog::AcceptMode::AcceptSave );
 	if ( diag.exec() != QDialog::DialogCode::Accepted )
 		return;

@@ -42,7 +42,6 @@ auto create( std::string_view root_, std::string_view indexLocation, const std::
 		return 1;
 	}
 
-	writer << "path, size, sha2, crc32\n";
 	auto start{ std::chrono::high_resolution_clock::now() };
 
 	unsigned count{ 0 };
@@ -89,7 +88,7 @@ auto create( std::string_view root_, std::string_view indexLocation, const std::
 		const auto sha256{ sha256er.getHash() };
 		const auto crc32{ crc32er.getHash() };
 
-		writer << fmt::format( "{}, {}, {}, {}\n", pathRel, size, sha256, crc32 );
+		writer << fmt::format( "{}\xFF{}\xFF{}\xFF{}\xFF\xFD", pathRel, size, sha256, crc32 );
 		out->write( OutputKind::Info, fmt::format( "Processed file `{}`", path.string() ) );
 		count += 1;
 	}
