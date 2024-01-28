@@ -12,7 +12,7 @@
 #if defined(UNIX)
 	#define EXEC_SUFFIX
 	const auto DIVIDER = '/';
-	const auto BIN_PATH = "linux64";
+	const auto BIN_FOLDER = "linux64";
 #else
 	#define EXEC_SUFFIX ".exe"
 	const auto DIVIDER = '\\';

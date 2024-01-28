@@ -31,7 +31,9 @@ list( APPEND ${PROJECT_NAME}_SOURCES
 	"${CMAKE_CURRENT_LIST_DIR}/src/verify.hpp"
 )
 
-add_executable( ${PROJECT_NAME} ${${PROJECT_NAME}_SOURCES} )
+add_executable( ${PROJECT_NAME} ${${PROJECT_NAME}_SOURCES}
+	src/output/RsvOutput.cpp
+	src/output/RsvOutput.hpp)
 target_compile_definitions( ${PROJECT_NAME} PRIVATE $<$<CONFIG:Debug>:DEBUG> )
 
 find_package( Argumentum CONFIG REQUIRED )

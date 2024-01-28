@@ -9,6 +9,7 @@
 
 #include "create.hpp"
 #include "output/CsvOutput.hpp"
+#include "output/RsvOutput.hpp"
 #include "output/JsonOutput.hpp"
 #include "output/Output.hpp"
 #include "output/SimpleOutput.hpp"
@@ -75,7 +76,7 @@ auto main( int argc, char* argv[] ) -> int {
 	params.add_parameter( format, "--format", "-f" )
 		.help( "Output format. [simple, json, csv] default: `simple`" )
 		.metavar( "format" )
-		.choices( { "simple", "json", "csv" } )
+		.choices( { "simple", "json", "csv", "rsv" } )
 		.maxargs( 1 )
 		.absent( "simple" );
 	params.add_parameter( overwrite, "--overwrite" )
@@ -100,6 +101,9 @@ auto main( int argc, char* argv[] ) -> int {
 			break;
 		case 'c':
 			output = new CsvOutput{};
+			break;
+		case 'r':
+			output = new RsvOutput{};
 			break;
 		default:
 			fmt::println( stderr, "Invalid `--format` argument: `{}`", format );

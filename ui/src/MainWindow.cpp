@@ -59,7 +59,7 @@ MainWindow::MainWindow() : QMainWindow() {
 			auto exeDirPath = QApplication::applicationDirPath();
 
 			#if defined( DEBUG )
-				auto path = QString( "C:/Program Files (x86)/Steam/steamapps/common/Portal 2 Community Edition" );
+				auto path = QString( "/drive/SteamLibrary/steamapps/common/Portal 2 Community Edition/" );
 			#else
 				auto path = QString{};
 			#endif
@@ -167,7 +167,9 @@ void MainWindow::onVerifyFiles( bool checked ) {
 	);
 	connect(
 		proc, &QProcess::readyReadStandardError, this,
-		[=, this]() -> void { this->statusLabel->setText( proc->readAllStandardError() ); }
+		[=, this]() -> void {
+			this->statusLabel->setText( proc->readAllStandardError() );
+		}
 	);
 	connect(
 		proc, &QProcess::readyReadStandardOutput, this,
@@ -181,6 +183,7 @@ void MainWindow::onVerifyFiles( bool checked ) {
 
 				// `[type,context,message,got?,expected?]` where `got` and `expected` are present if `type` is `report`
 				const auto parts = splitOutputLine( line );
+				qDebug() << parts;
 
 				// reports should be put in the table, while messages in the status bar
 				if ( parts[ 0 ] == "report" )
@@ -190,6 +193,11 @@ void MainWindow::onVerifyFiles( bool checked ) {
 			}
 		}
 	);
+
+
+	connect( proc, &QProcess::errorOccurred, this, [&proc](QProcess::ProcessError error) {
+		qDebug( "%u %u", error, proc->exitCode() );
+	});
 	proc->setProgram( getVerifierPath() );
 
 	// Setup arguments

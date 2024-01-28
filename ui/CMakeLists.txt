@@ -56,7 +56,11 @@ add_executable(
 	${PROJECT_NAME} WIN32
 		${${PROJECT_NAME}_SOURCES}
 )
-target_compile_definitions( ${PROJECT_NAME} PRIVATE $<$<CONFIG:Debug>:DEBUG> )
+target_compile_definitions( ${PROJECT_NAME} PRIVATE $<$<CONFIG:Debug>:DEBUG> $<$<BOOL:UNIX>:UNIX> )
+set_target_properties( ${PROJECT_NAME}
+	PROPERTIES
+		RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
+)
 
 # Final Qt setup
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
