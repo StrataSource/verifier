@@ -50,7 +50,7 @@ auto create( std::string_view root_, std::string_view indexLocation, const std::
 	for ( const auto& exclusion : excluded ) {
 		exclusionREs.emplace_back( exclusion, std::regex::ECMAScript | std::regex::icase | std::regex::optimize );
 	}
-	out->write( OutputKind::Info, fmt::format( "Done in {}", std::chrono::duration_cast<std::chrono::seconds>( std::chrono::high_resolution_clock::now() - start ) ) );
+	out->write( OutputKind::Info, fmt::format( "Done in {}", std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::high_resolution_clock::now() - start ) ) );
 
 	unsigned count{ 0 };
 	unsigned errors{ 0 };
