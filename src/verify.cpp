@@ -38,13 +38,19 @@ auto verify( std::string_view root_, std::string_view indexLocation, const Outpu
 	unsigned errors{ 0 };
 	auto start{ std::chrono::high_resolution_clock::now() };
 
-	// skip csv header
-	while ( indexStream.get() != '\n' ) ;
-
 	// read and verify
-	for ( std::string line; std::getline( indexStream, line ); ) {
+	std::stringbuf line{};
+	std::FILE* file{ nullptr };
+	while (! indexStream.eof() ) {
+		line.pubseekpos( 0 );
+		// read row data
+		indexStream.get( line, '\xFD' );
+		indexStream.get(); // value end separator
+		if ( line.in_avail() == 0 )
+			break;
+
+		const auto split{ splitString( line.str(), "\xFF" ) };
 		// deserialize row
-		const auto split{ splitString( line, ", " ) };
 		const auto& pathRel{ split[ 0 ] };
 		const auto expectedSize{ strtoull( split[ 1 ].c_str(), nullptr, 10 ) };
 		const auto& expectedSha256{ split[ 2 ] };
@@ -59,12 +65,22 @@ auto verify( std::string_view root_, std::string_view indexLocation, const Outpu
 			continue;
 		}
 
-		std::FILE* file{ fopen( path.c_str(), "rb" ) };
+		// open the file, but first close the old one if it is open
+		if ( file )
+			std::fclose( file );
+		file = fopen( path.c_str(), "rb" );
+		if (! file ) {
+			out->write( OutputKind::Error, fmt::format( "Failed to open file: {}", path.c_str() ) );
+			continue;
+		}
+
 		std::fseek( file, 0, SEEK_END );
 
 		auto length{ std::ftell( file ) };
 		if ( length != expectedSize ) {
 			out->report( pathRel, "Sizes don't match.", std::to_string( length ), split[3] );
+			out->write( OutputKind::Info, fmt::format( "Processed entry `{}`", pathRel ) );
+			entries += 1;
 			errors += 1;
 			continue;
 		}
@@ -92,6 +108,7 @@ auto verify( std::string_view root_, std::string_view indexLocation, const Outpu
 		out->write( OutputKind::Info, fmt::format( "Processed entry `{}`", pathRel ) );
 		entries += 1;
 	}
+	std::fclose( file );
 
 	auto end{ std::chrono::high_resolution_clock::now() };
 	out->write(
@@ -108,9 +125,9 @@ auto verify( std::string_view root_, std::string_view indexLocation, const Outpu
 }
 
 static auto splitString( const std::string& string, const std::string& delim ) -> std::vector<std::string> {
-	size_t end{ 0 };
-	size_t last{ 0 };
 	std::vector<std::string> res{};
+	size_t last{ 0 };
+	size_t end;
 
 	while ( (end = string.find( delim, last )) != std::string::npos ) {
 		// ptr + lastOffset -> segment start, offset - lastOffset -> size
