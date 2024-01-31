@@ -65,7 +65,7 @@ auto main( int argc, char* argv[] ) -> int {
 		.maxargs( 1 )
 		.absent( defaultRoot );
 	params.add_parameter( excludes, "--exclude", "-e" )
-		.help( "GLOB pattern(s) to exclude when creating the index." )
+		.help( "RegExp pattern(s) to exclude files when creating the index." )
 		.metavar( "excluded" )
 		.minargs( 1 );
 	params.add_parameter( indexLocation, "--index", "-i" )
@@ -126,13 +126,9 @@ auto main( int argc, char* argv[] ) -> int {
 	}
 	if ( newIndex ) {
 		// stuff we ignore during the building of the index, the "standard" useless stuff is hardcoded
-		std::vector<std::string> ignored{
-			"sdk_content/**/*.*",
-			"hammer/autosave/*.*",
-			"**/index.csv",
-		};
-		excludes.insert( excludes.end(), ignored.begin(), ignored.end() );
-
+		excludes.emplace_back( "sdk_content.*" );
+		excludes.emplace_back( ".*.vmf_autosave" );
+		excludes.emplace_back( ".*index.rsv" );
 		ret = create( root, indexLocation, excludes, overwrite, output );
 	} else {
 		// warn about stuff which shouldn't be here, don't use the `output::report` as this is a negligible user error
