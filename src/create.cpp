@@ -1,16 +1,15 @@
 //
 // Created by ENDERZOMBI102 on 15/10/2023.
 //
-#include <crc32.h>
 #include <filesystem>
 #include <fmt/chrono.h>
 #include <fmt/format.h>
 #include <fstream>
+#include <hash-library/crc32.h>
+#include <hash-library/sha256.h>
 #include <iostream>
-#include <ranges>
-#include <sha256.h>
-#include <string_view>
 #include <regex>
+#include <string_view>
 
 #include "create.hpp"
 
@@ -64,7 +63,7 @@ auto create( std::string_view root_, std::string_view indexLocation, const std::
 		}
 
 		// relative path
-		const auto pathRel = std::filesystem::relative(path, root).string();
+		const auto pathRel{ std::filesystem::relative( path, root ).string() };
 
 		auto breaker{ false };
 		for ( const auto& exclusion : exclusionREs ) {
@@ -112,7 +111,7 @@ auto create( std::string_view root_, std::string_view indexLocation, const std::
 		fmt::format(
 			"Finished processing {} files in {}! (with {} errors)",
 			count,
-			std::chrono::duration_cast<std::chrono::seconds>(end - start),
+			std::chrono::duration_cast<std::chrono::seconds>( end - start ),
 			errors
 		)
 	);

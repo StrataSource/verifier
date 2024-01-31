@@ -5,10 +5,9 @@
 #include <fmt/chrono.h>
 #include <fmt/format.h>
 #include <fstream>
-#include <ranges>
+#include <hash-library/crc32.h>
+#include <hash-library/sha256.h>
 #include <string_view>
-#include <sha256.h>
-#include <crc32.h>
 
 #include "verify.hpp"
 
@@ -78,7 +77,7 @@ auto verify( std::string_view root_, std::string_view indexLocation, const Outpu
 
 		auto length{ std::ftell( file ) };
 		if ( length != expectedSize ) {
-			out->report( pathRel, "Sizes don't match.", std::to_string( length ), split[3] );
+			out->report( pathRel, "Sizes don't match.", std::to_string( length ), split[ 3 ] );
 			out->write( OutputKind::Info, fmt::format( "Processed entry `{}`", pathRel ) );
 			entries += 1;
 			errors += 1;
@@ -116,7 +115,7 @@ auto verify( std::string_view root_, std::string_view indexLocation, const Outpu
 		fmt::format(
 			"Verified {} files in {} with {} errors!",
 			entries,
-			std::chrono::duration_cast<std::chrono::seconds>(end - start),
+			std::chrono::duration_cast<std::chrono::seconds>( end - start ),
 			errors
 		)
 	);
@@ -129,7 +128,7 @@ static auto splitString( const std::string& string, const std::string& delim ) -
 	size_t last{ 0 };
 	size_t end;
 
-	while ( (end = string.find( delim, last )) != std::string::npos ) {
+	while ( ( end = string.find( delim, last ) ) != std::string::npos ) {
 		// ptr + lastOffset -> segment start, offset - lastOffset -> size
 		res.push_back( string.substr( last, end - last ) );
 		last = end + delim.length();
