@@ -40,6 +40,7 @@ auto verify( std::string_view root_, std::string_view indexLocation, const Outpu
 
 	// read and verify
 	std::stringbuf line{};
+	std::FILE* file{ nullptr };
 	while (! indexStream.eof() ) {
 		line.pubseekpos( 0 );
 		// read row data
@@ -64,12 +65,22 @@ auto verify( std::string_view root_, std::string_view indexLocation, const Outpu
 			continue;
 		}
 
-		std::FILE* file{ fopen( path.c_str(), "rb" ) };
+		// open the file, but first close the old one if it is open
+		if ( file )
+			std::fclose( file );
+		file = fopen( path.c_str(), "rb" );
+		if (! file ) {
+			out->write( OutputKind::Error, fmt::format( "Failed to open file: {}", path.c_str() ) );
+			continue;
+		}
+
 		std::fseek( file, 0, SEEK_END );
 
 		auto length{ std::ftell( file ) };
 		if ( length != expectedSize ) {
 			out->report( pathRel, "Sizes don't match.", std::to_string( length ), split[3] );
+			out->write( OutputKind::Info, fmt::format( "Processed entry `{}`", pathRel ) );
+			entries += 1;
 			errors += 1;
 			continue;
 		}
@@ -97,6 +108,7 @@ auto verify( std::string_view root_, std::string_view indexLocation, const Outpu
 		out->write( OutputKind::Info, fmt::format( "Processed entry `{}`", pathRel ) );
 		entries += 1;
 	}
+	std::fclose( file );
 
 	auto end{ std::chrono::high_resolution_clock::now() };
 	out->write(
@@ -113,9 +125,9 @@ auto verify( std::string_view root_, std::string_view indexLocation, const Outpu
 }
 
 static auto splitString( const std::string& string, const std::string& delim ) -> std::vector<std::string> {
-	size_t end{ 0 };
-	size_t last{ 0 };
 	std::vector<std::string> res{};
+	size_t last{ 0 };
+	size_t end;
 
 	while ( (end = string.find( delim, last )) != std::string::npos ) {
 		// ptr + lastOffset -> segment start, offset - lastOffset -> size

@@ -43,7 +43,6 @@ auto create( std::string_view root_, std::string_view indexLocation, const std::
 		return 1;
 	}
 
-	writer << "path, size, sha2, crc32\n";
 	out->write( OutputKind::Info, "Compiling exclusion regexes..." );
 	// allocate all at once
 	std::vector<std::regex> exclusionREs{};
@@ -51,7 +50,7 @@ auto create( std::string_view root_, std::string_view indexLocation, const std::
 	for ( const auto& exclusion : excluded ) {
 		exclusionREs.emplace_back( exclusion, std::regex::ECMAScript | std::regex::icase | std::regex::optimize );
 	}
-	out->write( OutputKind::Info, fmt::format( "Done in ", std::chrono::duration_cast<std::chrono::seconds>( std::chrono::high_resolution_clock::now() - start ) ) );
+	out->write( OutputKind::Info, fmt::format( "Done in {}", std::chrono::duration_cast<std::chrono::seconds>( std::chrono::high_resolution_clock::now() - start ) ) );
 
 	unsigned count{ 0 };
 	unsigned errors{ 0 };
@@ -77,14 +76,20 @@ auto create( std::string_view root_, std::string_view indexLocation, const std::
 		if ( breaker )
 			continue;
 
-		// data-related columns
+		// open file
 		std::FILE* file{ fopen( path.c_str(), "rb" ) };
+		if (! file ) {
+			out->write( OutputKind::Error, fmt::format( "Failed to open file: {}", path.c_str() ) );
+			continue;
+		}
+
+		// data-related columns
+		// size
 		std::fseek( file, 0, SEEK_END );
-
 		const auto size{ std::ftell( file ) };
-
 		std::fseek( file, 0, 0 );
 
+		// sha256/crc32
 		SHA256 sha256er{};
 		CRC32 crc32er{};
 		unsigned char buffer[16] { 0 };
@@ -93,11 +98,10 @@ auto create( std::string_view root_, std::string_view indexLocation, const std::
 			sha256er.add( buffer, bufCount );
 			crc32er.add( buffer, bufCount );
 		}
+		std::fclose( file );
 
-		const auto sha256{ sha256er.getHash() };
-		const auto crc32{ crc32er.getHash() };
-
-		writer << fmt::format( "{}\xFF{}\xFF{}\xFF{}\xFF\xFD", pathRel, size, sha256, crc32 );
+		// write out entry
+		writer << fmt::format( "{}\xFF{}\xFF{}\xFF{}\xFF\xFD", pathRel, size, sha256er.getHash(), crc32er.getHash() );
 		out->write( OutputKind::Info, fmt::format( "Processed file `{}`", path.string() ) );
 		count += 1;
 	}
