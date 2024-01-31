@@ -25,7 +25,6 @@
 	const auto BIN_PATH = "bin/linux64";
 #endif
 
-
 auto main( int argc, char* argv[] ) -> int {
 	std::string defaultRoot;
 	{
@@ -52,7 +51,7 @@ auto main( int argc, char* argv[] ) -> int {
 	argumentum::argument_parser parser{};
 	parser.config()
 		.program( programFile.string() )
-		.description( "A tool used to verify a game's install." );
+		.description( "A tool used to verify a game's install. v" CLI_VERSION );
 
 	auto params = parser.params();
 	params.add_parameter( newIndex, "--new-index" )
