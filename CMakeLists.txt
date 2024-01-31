@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.24)
 
 project( verifier
 	DESCRIPTION "A tool used to verify a game's install."
-	VERSION 0.1.0
+	VERSION 0.1.1
 )
 set( CMAKE_CXX_STANDARD 20 )
 set( CMAKE_CXX_STANDARD_REQUIRED ON )
@@ -32,7 +32,9 @@ list( APPEND ${PROJECT_NAME}_SOURCES
 )
 
 add_executable( ${PROJECT_NAME} ${${PROJECT_NAME}_SOURCES} )
-target_compile_definitions( ${PROJECT_NAME} PRIVATE $<$<CONFIG:Debug>:DEBUG> )
+target_compile_definitions( ${PROJECT_NAME} PRIVATE $<$<CONFIG:Debug>:DEBUG> "CLI_VERSION=\"${PROJECT_VERSION}\"" )
+target_compile_options( ${PROJECT_NAME} PRIVATE -flto -static )
+target_link_options( ${PROJECT_NAME} PRIVATE -flto -static )
 
 find_package( Argumentum CONFIG REQUIRED )
 find_package( fmt CONFIG REQUIRED )
