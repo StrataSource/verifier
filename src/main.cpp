@@ -51,7 +51,7 @@ auto main( int argc, char* argv[] ) -> int {
 	argumentum::argument_parser parser{};
 	parser.config()
 		.program( programFile.string() )
-		.description( "A tool used to verify a game's install. v" CLI_VERSION );
+		.description( "A tool used to verify a game's install. v" VERIFIER_VERSION );
 
 	auto params = parser.params();
 	params.add_parameter( newIndex, "--new-index" )

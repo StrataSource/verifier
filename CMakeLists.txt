@@ -15,7 +15,19 @@ set( CMAKE_SKIP_BUILD_RPATH FALSE )
 set( CMAKE_BUILD_RPATH_USE_ORIGIN TRUE )
 set( CMAKE_INSTALL_RPATH $ORIGIN )
 
-# Add sources and create executable
+# Enable PIE
+set( CMAKE_POSITION_INDEPENDENT_CODE ON )
+
+# Enable IPO/LTO if supported
+include( CheckIPOSupported )
+check_ipo_supported( RESULT VERIFIER_IPO_SUPPORTED OUTPUT VERIFIER_IPO_ERROR )
+if( VERIFIER_IPO_SUPPORTED )
+	set( CMAKE_INTERPROCEDURAL_OPTIMIZATION ON )
+else()
+	message( WARNING "IPO/LTO not supported! (${VERIFIER_IPO_ERROR})" )
+endif()
+
+# Add sources for CLI executable
 list( APPEND ${PROJECT_NAME}_SOURCES
 	"${CMAKE_CURRENT_LIST_DIR}/src/main.cpp"
 	"${CMAKE_CURRENT_LIST_DIR}/src/output/Output.cpp"
@@ -34,10 +46,9 @@ list( APPEND ${PROJECT_NAME}_SOURCES
 	"${CMAKE_CURRENT_LIST_DIR}/src/verify.hpp"
 )
 
+# Create CLI executable
 add_executable( ${PROJECT_NAME} ${${PROJECT_NAME}_SOURCES} )
-target_compile_definitions( ${PROJECT_NAME} PRIVATE $<$<CONFIG:Debug>:DEBUG> "CLI_VERSION=\"${PROJECT_VERSION}\"" )
-target_compile_options( ${PROJECT_NAME} PRIVATE -flto -static )
-target_link_options( ${PROJECT_NAME} PRIVATE -flto -static )
+target_compile_definitions( ${PROJECT_NAME} PRIVATE $<$<CONFIG:Debug>:DEBUG> VERIFIER_VERSION="${PROJECT_VERSION}" )
 
 find_package( Argumentum CONFIG REQUIRED )
 find_package( fmt CONFIG REQUIRED )
