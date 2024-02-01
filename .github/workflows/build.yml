@@ -1,0 +1,90 @@
+name: Build
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    # nothing here
+
+env:
+  BUILD_DIR: '${{github.workspace}}/build'
+
+jobs:
+  build-msvc:
+    strategy:
+      matrix:
+        build_type: [Debug, Release]
+        compiler: [msvc]
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: cmd
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+          spectre: true
+
+      - name: Configure CMake
+        run: cmake -G "Ninja" -B "${{env.BUILD_DIR}}" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DVERIFIER_BUILD_UI=OFF
+
+      - name: Build
+        working-directory: '${{env.BUILD_DIR}}'
+        run: |
+          cmake --build . --config ${{matrix.build_type}} -t verifier -- -j%NUMBER_OF_PROCESSORS%
+
+      - name: Upload Binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: verifier-Windows-${{matrix.compiler}}-${{matrix.build_type}}
+          path: |
+            ${{env.BUILD_DIR}}/verifier.exe
+          retention-days: 7
+
+
+  build-linux:
+    strategy:
+      matrix:
+        build_type: [Debug, Release]
+        compiler: [clang]
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Necessary Packages
+        run: |
+          sudo apt update
+          sudo apt install -y cmake build-essential ninja-build chrpath
+
+      - name: Install Clang
+        if: ${{matrix.compiler == 'clang'}}
+        uses: KyleMayes/install-llvm-action@v1
+        with:
+          version: 17
+
+      - name: Configure CMake
+        run: |
+          cmake -G "Ninja" -B "${{env.BUILD_DIR}}" -DCMAKE_C_COMPILER="clang" -DCMAKE_CXX_COMPILER="clang++" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DVERIFIER_BUILD_UI=OFF
+
+      - name: Build
+        working-directory: '${{env.BUILD_DIR}}'
+        run: |
+          cmake --build . --config ${{matrix.build_type}} -t verifier -- -j$(nproc)
+
+      - name: Upload Binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: verifier-Linux-${{matrix.compiler}}-${{matrix.build_type}}
+          path: |
+            ${{env.BUILD_DIR}}/verifier
+          retention-days: 7

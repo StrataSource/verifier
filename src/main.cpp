@@ -51,7 +51,7 @@ auto main( int argc, char* argv[] ) -> int {
 	argumentum::argument_parser parser{};
 	parser.config()
 		.program( programFile.string() )
-		.description( "A tool used to verify a game's install. v" CLI_VERSION );
+		.description( "A tool used to verify a game's install. v" VERIFIER_VERSION );
 
 	auto params = parser.params();
 	params.add_parameter( newIndex, "--new-index" )
@@ -113,15 +113,26 @@ auto main( int argc, char* argv[] ) -> int {
 
 	// `tee`, can be useful to track down a failure
 	FILE* file{ nullptr };
-	if ( tee )
-		file = fopen( "./verifier.log", "w" );
+	if ( tee ) {
+#ifndef _WIN32
+		file = std::fopen( "./verifier.log", "w" );
+#else
+		fopen_s( &file, "./verifier.log", "w" );
+#endif
+	}
 
 	output->init( file );
 	// `$basename started at $time` message
 	{
 		auto now{ std::time( nullptr ) };
+#ifndef _WIN32
 		auto local{ std::localtime( &now ) };
-		const auto line = fmt::format( "`{}` started at {}:{}:{}", programFile.string(), local->tm_hour, local->tm_min, local->tm_sec );
+		const auto line = fmt::format( "`{}` started at {:02d}:{:02d}:{:02d}", programFile.string(), local->tm_hour, local->tm_min, local->tm_sec );
+#else
+		tm local{};
+		localtime_s( &local, &now );
+		const auto line = fmt::format( "`{}` started at {:02d}:{:02d}:{:02d}", programFile.string(), local.tm_hour, local.tm_min, local.tm_sec );
+#endif
 		output->write( OutputKind::Info, line );
 	}
 	if ( newIndex ) {

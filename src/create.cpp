@@ -76,7 +76,12 @@ auto create( std::string_view root_, std::string_view indexLocation, const std::
 			continue;
 
 		// open file
+#ifndef _WIN32
 		std::FILE* file{ std::fopen( path.c_str(), "rb" ) };
+#else
+		std::FILE* file{ nullptr };
+		fopen_s( &file, path.c_str(), "rb" );
+#endif
 		if (! file ) {
 			out->write( OutputKind::Error, fmt::format( "Failed to open file: {}", path ) );
 			continue;
