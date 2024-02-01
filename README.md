@@ -1,5 +1,5 @@
 # Verifier
-Verifier is a small program written in Rust that allows to build an index of a folder structure and to re-validate it based on that index
+Verifier is a small program written in ~~Rust~~C++ that allows to build an index of a folder structure and to re-validate it based on that index
 
 # Usage
 ```shell
