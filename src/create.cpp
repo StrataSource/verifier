@@ -1,14 +1,14 @@
 //
 // Created by ENDERZOMBI102 on 15/10/2023.
 //
+#include <crc32.h>
 #include <filesystem>
 #include <fmt/chrono.h>
 #include <fmt/format.h>
 #include <fstream>
-#include <hash-library/crc32.h>
-#include <hash-library/sha256.h>
 #include <iostream>
 #include <regex>
+#include <sha256.h>
 #include <string_view>
 
 #include "create.hpp"

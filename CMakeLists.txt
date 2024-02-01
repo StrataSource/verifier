@@ -50,10 +50,9 @@ list( APPEND ${PROJECT_NAME}_SOURCES
 add_executable( ${PROJECT_NAME} ${${PROJECT_NAME}_SOURCES} )
 target_compile_definitions( ${PROJECT_NAME} PRIVATE $<$<CONFIG:Debug>:DEBUG> VERIFIER_VERSION="${PROJECT_VERSION}" )
 
-find_package( Argumentum CONFIG REQUIRED )
-find_package( fmt CONFIG REQUIRED )
-find_package( unofficial-hash-library CONFIG REQUIRED )
-target_link_libraries( ${PROJECT_NAME} PRIVATE Argumentum::argumentum fmt::fmt unofficial::hash-library )
+# Link to CLI dependencies
+include( "${CMAKE_CURRENT_SOURCE_DIR}/src/thirdparty/CMakeLists.txt" )
+target_link_libraries( ${PROJECT_NAME} PRIVATE Argumentum::argumentum fmt::fmt hash-library )
 
 # Create GUI executable
 if( VERIFIER_BUILD_UI )
