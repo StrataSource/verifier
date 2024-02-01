@@ -7,6 +7,9 @@ project( verifier
 set( CMAKE_CXX_STANDARD 20 )
 set( CMAKE_CXX_STANDARD_REQUIRED ON )
 
+# Options
+option( VERIFIER_BUILD_GUI "Build the verifier GUI application" ON )
+
 # RPath for Linux
 set( CMAKE_SKIP_BUILD_RPATH FALSE )
 set( CMAKE_BUILD_RPATH_USE_ORIGIN TRUE )
@@ -41,4 +44,7 @@ find_package( fmt CONFIG REQUIRED )
 find_package( unofficial-hash-library CONFIG REQUIRED )
 target_link_libraries( ${PROJECT_NAME} PRIVATE Argumentum::argumentum fmt::fmt unofficial::hash-library )
 
-add_subdirectory( ui )
+# Create GUI executable
+if( VERIFIER_BUILD_UI )
+	add_subdirectory( ui )
+endif()
