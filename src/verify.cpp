@@ -67,9 +67,9 @@ auto verify( std::string_view root_, std::string_view indexLocation, const Outpu
 		// open the file, but first close the old one if it is open
 		if ( file )
 			std::fclose( file );
-		file = fopen( path.c_str(), "rb" );
+		file = std::fopen( path.string().c_str(), "rb" );
 		if (! file ) {
-			out->write( OutputKind::Error, fmt::format( "Failed to open file: {}", path.c_str() ) );
+			out->write( OutputKind::Error, fmt::format( "Failed to open file: {}", path.string() ) );
 			continue;
 		}
 

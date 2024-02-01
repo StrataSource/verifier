@@ -56,7 +56,7 @@ auto create( std::string_view root_, std::string_view indexLocation, const std::
 	// read and create index
 	std::filesystem::recursive_directory_iterator iterator{ root };
 	for ( const auto& entry : iterator ) {
-		const auto& path{ entry.path() };
+		const auto& path{ entry.path().string() };
 
 		if (! std::filesystem::is_regular_file( path ) ) {
 			continue;
@@ -76,9 +76,9 @@ auto create( std::string_view root_, std::string_view indexLocation, const std::
 			continue;
 
 		// open file
-		std::FILE* file{ fopen( path.c_str(), "rb" ) };
+		std::FILE* file{ std::fopen( path.c_str(), "rb" ) };
 		if (! file ) {
-			out->write( OutputKind::Error, fmt::format( "Failed to open file: {}", path.c_str() ) );
+			out->write( OutputKind::Error, fmt::format( "Failed to open file: {}", path ) );
 			continue;
 		}
 
@@ -101,7 +101,7 @@ auto create( std::string_view root_, std::string_view indexLocation, const std::
 
 		// write out entry
 		writer << fmt::format( "{}\xFF{}\xFF{}\xFF{}\xFF\xFD", pathRel, size, sha256er.getHash(), crc32er.getHash() );
-		out->write( OutputKind::Info, fmt::format( "Processed file `{}`", path.string() ) );
+		out->write( OutputKind::Info, fmt::format( "Processed file `{}`", path ) );
 		count += 1;
 	}
 
