@@ -67,7 +67,12 @@ auto verify( std::string_view root_, std::string_view indexLocation, const Outpu
 		// open the file, but first close the old one if it is open
 		if ( file )
 			std::fclose( file );
-		file = std::fopen( path.string().c_str(), "rb" );
+#ifndef _WIN32
+		std::FILE* file{ std::fopen( path.string().c_str(), "rb" ) };
+#else
+		file = nullptr;
+		fopen_s( &file, path.string().c_str(), "rb" );
+#endif
 		if (! file ) {
 			out->write( OutputKind::Error, fmt::format( "Failed to open file: {}", path.string() ) );
 			continue;
