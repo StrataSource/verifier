@@ -3,12 +3,12 @@ set( BUILD_SHARED_LIBS OFF )
 
 # argumentum
 set( ARGUMENTUM_BUILD_STATIC_LIBS ON CACHE INTERNAL "" )
-add_subdirectory( "${CMAKE_CURRENT_LIST_DIR}/argumentum" )
+add_subdirectory( "${CMAKE_CURRENT_LIST_DIR}/argumentum" SYSTEM )
 
 # fmt
-add_subdirectory( "${CMAKE_CURRENT_LIST_DIR}/fmt" )
+add_subdirectory( "${CMAKE_CURRENT_LIST_DIR}/fmt" SYSTEM )
 
 # hash-library
 file( GLOB HASH_LIBRARY_SOURCES "${CMAKE_CURRENT_LIST_DIR}/hash-library/*.cpp" "${CMAKE_CURRENT_LIST_DIR}/hash-library/*.h" )
 add_library( hash-library STATIC ${HASH_LIBRARY_SOURCES} )
-target_include_directories( hash-library PUBLIC "${CMAKE_CURRENT_LIST_DIR}" )
+target_include_directories( hash-library PUBLIC "${CMAKE_CURRENT_LIST_DIR}" SYSTEM )

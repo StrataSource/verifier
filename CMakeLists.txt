@@ -48,7 +48,7 @@ list( APPEND ${PROJECT_NAME}_SOURCES
 
 # Create CLI executable
 add_executable( ${PROJECT_NAME} ${${PROJECT_NAME}_SOURCES} )
-target_compile_definitions( ${PROJECT_NAME} PRIVATE $<$<CONFIG:Debug>:DEBUG> VERIFIER_VERSION="${PROJECT_VERSION}" )
+target_compile_definitions( ${PROJECT_NAME} PRIVATE $<$<CONFIG:Debug>:DEBUG> "VERIFIER_VERSION=\"${PROJECT_VERSION}\"" )
 
 # Link to CLI dependencies
 include( "${CMAKE_CURRENT_SOURCE_DIR}/src/thirdparty/CMakeLists.txt" )
