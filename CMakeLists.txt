@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.24)
 
 project( verifier
 	DESCRIPTION "A tool used to verify a game's install."
-	VERSION 1.0.0
+	VERSION 0.2.1
 )
 set( CMAKE_CXX_STANDARD 20 )
 set( CMAKE_CXX_STANDARD_REQUIRED ON )
