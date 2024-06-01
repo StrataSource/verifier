@@ -18,21 +18,21 @@
 // the index file is encoded as `Rows-of-String-Values`
 // correct the index path with os
 #if defined( _WIN32 )
-	const auto INDEX_PATH = "bin/win64/index.rsv";
-	const auto BIN_PATH = "bin/win64/";
+	const auto INDEX_PATH = "bin/win64/verifier_index.rsv";
+	const auto BIN_OS_DIR = "win64";
 #else
-	const auto INDEX_PATH = "bin/linux64/index.rsv";
-	const auto BIN_PATH = "bin/linux64";
+	const auto INDEX_PATH = "bin/linux64/verifier_index.rsv";
+	const auto BIN_OS_DIR = "linux64";
 #endif
 
 auto main( int argc, char* argv[] ) -> int {
 	std::string defaultRoot;
 	{
 		auto dir = std::filesystem::current_path();
-		if ( dir.string().ends_with( BIN_PATH ) ) {
+		if ( dir.filename() == BIN_OS_DIR && dir.parent_path().filename() == "bin" ) {
 			// running directly from binaries directory, set root to ../..
 			defaultRoot = dir.parent_path().parent_path().string();
-		} else if ( dir.filename() == "bin/" ) {
+		} else if ( dir.filename() == "bin" ) {
 			defaultRoot = dir.parent_path().string();
 		} else {
 			defaultRoot = dir.string();
