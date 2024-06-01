@@ -1,9 +1,10 @@
 //
 // Created by ENDERZOMBI102 on 14/10/2023.
 //
-#include <vector>
-#include <filesystem>
 #include <array>
+#include <filesystem>
+#include <memory>
+#include <vector>
 #include <argumentum/argparse.h>
 #include <fmt/format.h>
 
@@ -91,19 +92,19 @@ auto main( int argc, char* argv[] ) -> int {
 		return 1;
 	}
 
-	Output* output;
+	std::unique_ptr<Output> output;
 	switch ( format.at(0) ) {
 		case 's':
-			output = new SimpleOutput{};
+			output = std::make_unique<SimpleOutput>();
 			break;
 		case 'j':
-			output = new JsonOutput{};
+			output = std::make_unique<JsonOutput>();
 			break;
 		case 'c':
-			output = new CsvOutput{};
+			output = std::make_unique<CsvOutput>();
 			break;
 		case 'r':
-			output = new RsvOutput{};
+			output = std::make_unique<RsvOutput>();
 			break;
 		default:
 			fmt::println( stderr, "Invalid `--format` argument: `{}`", format );
@@ -140,7 +141,7 @@ auto main( int argc, char* argv[] ) -> int {
 		excludes.emplace_back( "sdk_content.*" );
 		excludes.emplace_back( ".*.vmf_autosave" );
 		excludes.emplace_back( ".*index.rsv" );
-		ret = create( root, indexLocation, excludes, overwrite, output );
+		ret = create( root, indexLocation, excludes, overwrite, output.get() );
 	} else {
 		// warn about stuff which shouldn't be here, don't use the `output::report` as this is a negligible user error
 		if ( overwrite )
@@ -148,9 +149,8 @@ auto main( int argc, char* argv[] ) -> int {
 		if (! excludes.empty() )
 			fmt::println( stderr, "WARN: current action doesn't support `--exclude`, please remove it." );
 
-		ret = verify( root, indexLocation, output );
+		ret = verify( root, indexLocation, output.get() );
 	}
-	output->end();
 	if ( file )
 		fclose( file );
 
