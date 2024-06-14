@@ -139,8 +139,9 @@ auto main( int argc, char* argv[] ) -> int {
 	if ( newIndex ) {
 		// stuff we ignore during the building of the index, the "standard" useless stuff is hardcoded
 		excludes.emplace_back( "sdk_content.*" );
-		excludes.emplace_back( ".*.vmf_autosave" );
-		excludes.emplace_back( ".*index.rsv" );
+		excludes.emplace_back( ".*\\.vmf_autosave.*" );
+		excludes.emplace_back( ".*\\.vmx" );
+		excludes.emplace_back( ".*index\\.rsv" );
 		ret = create( root, indexLocation, excludes, overwrite, output.get() );
 	} else {
 		// warn about stuff which shouldn't be here, don't use the `output::report` as this is a negligible user error
