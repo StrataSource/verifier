@@ -141,7 +141,8 @@ auto main( int argc, char* argv[] ) -> int {
 		excludes.emplace_back( "sdk_content.*" );
 		excludes.emplace_back( ".*\\.vmf_autosave.*" );
 		excludes.emplace_back( ".*\\.vmx" );
-		excludes.emplace_back( ".*index\\.rsv" );
+		excludes.emplace_back( ".*\\.log" );
+		excludes.emplace_back( ".*verifier_index\\.rsv" );
 		ret = create( root, indexLocation, excludes, overwrite, output.get() );
 	} else {
 		// warn about stuff which shouldn't be here, don't use the `output::report` as this is a negligible user error
