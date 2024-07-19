@@ -3,15 +3,15 @@
 //
 #include <filesystem>
 #include <fstream>
-#include <hash-library/crc32.h>
-#include <hash-library/sha256.h>
 #include <iostream>
 #include <regex>
 #include <string_view>
 
+#include <hash-library/crc32.h>
+#include <hash-library/sha256.h>
+
 #include "create.hpp"
 #include "log.hpp"
-
 
 auto create( std::string_view root_, std::string_view indexLocation, const std::vector<std::string>& excluded, bool overwrite ) noexcept -> int {
 	const std::filesystem::path root{ root_ };
@@ -22,7 +22,7 @@ auto create( std::string_view root_, std::string_view indexLocation, const std::
 			Log_Error( "Index file `{}` already exist, do you want to overwite it? (y/N)", indexPath.string() );
 			std::string input;
 			std::cin >> input;
-			if ( input != "y" ) {
+			if ( input != "y" && input != "Y" ) {
 				Log_Info( "Aborting." );
 				return 1;
 			}
@@ -82,7 +82,7 @@ auto create( std::string_view root_, std::string_view indexLocation, const std::
 		fopen_s( &file, path.c_str(), "rb" );
 #endif
 		if (! file ) {
-			Log_Error( "Failed to open file: {}", path );
+			Log_Error( "Failed to open file: `{}`", path );
 			continue;
 		}
 

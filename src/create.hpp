@@ -3,7 +3,7 @@
 //
 #pragma once
 
-#include <vector>
 #include <string_view>
+#include <vector>
 
 auto create( std::string_view root, std::string_view indexLocation, const std::vector<std::string>& excluded, bool overwrite ) noexcept -> int;
