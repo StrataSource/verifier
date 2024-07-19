@@ -140,7 +140,7 @@ void MainWindow::onGenerateManifest( bool checked ) {
 	proc->setProgram( getVerifierPath() );
 
 	// Setup arguments
-	QStringList arguments{ "--new-index", "-f", "csv", "--root", this->projectPath->text() };
+	QStringList arguments{ "--new-index", "--ui-report", "--root", this->projectPath->text() };
 	if ( this->manifestPath->text() != "default" )
 		arguments.append( { "-i", this->manifestPath->text() } );
 	proc->setArguments( arguments );
@@ -201,7 +201,7 @@ void MainWindow::onVerifyFiles( bool checked ) {
 	proc->setProgram( getVerifierPath() );
 
 	// Setup arguments
-	QStringList arguments{ "-f", "csv", "--root", this->projectPath->text() };
+	QStringList arguments{ "--ui-report", "--root", this->projectPath->text() };
 	if ( this->manifestPath->text() != "default" )
 		arguments.append( { "-i", this->manifestPath->text() } );
 	proc->setArguments( arguments );

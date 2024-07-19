@@ -2,8 +2,6 @@
 // Created by ENDERZOMBI102 on 15/10/2023.
 //
 #include <filesystem>
-#include <fmt/chrono.h>
-#include <fmt/format.h>
 #include <fstream>
 #include <hash-library/crc32.h>
 #include <hash-library/sha256.h>
@@ -12,44 +10,45 @@
 #include <string_view>
 
 #include "create.hpp"
+#include "log.hpp"
 
 
-auto create( std::string_view root_, std::string_view indexLocation, const std::vector<std::string>& excluded, bool overwrite, const Output* out ) noexcept -> int {
+auto create( std::string_view root_, std::string_view indexLocation, const std::vector<std::string>& excluded, bool overwrite ) noexcept -> int {
 	const std::filesystem::path root{ root_ };
 	const std::filesystem::path indexPath{ root / indexLocation };
 
 	if ( std::filesystem::exists( indexPath ) ) {
 		if (! overwrite ) {
-			out->write( OutputKind::Error, fmt::format( "Index file `{}` already exist, do you want to overwite it? (y/N)", indexPath.string() ) );
+			Log_Error( "Index file `{}` already exist, do you want to overwite it? (y/N)", indexPath.string() );
 			std::string input;
 			std::cin >> input;
 			if ( input != "y" ) {
-				out->write( OutputKind::Info, "Aborting." );
+				Log_Info( "Aborting." );
 				return 1;
 			}
 		} else {
-			out->write( OutputKind::Warn, fmt::format( "Index file `{}` already exist, will be overwritten.", indexPath.string() ) );
+			Log_Warn( "Index file `{}` already exist, will be overwritten.", indexPath.string() );
 		}
 	}
 
 	auto start{ std::chrono::high_resolution_clock::now() };
-	out->write( OutputKind::Info, fmt::format( "Creating index file at `{}`", indexPath.string() ) );
+	Log_Info( "Creating index file at `{}`", indexPath.string() );
 
 	// open index file with a writer stream
 	std::ofstream writer{ indexPath, std::ios_base::out | std::ios_base::trunc };
 	if (! writer.good() ) {
-		out->write( OutputKind::Error, fmt::format( "Failed to open index file for writing: N/D" ) );
+		Log_Error( "Failed to open index file for writing: N/D" );
 		return 1;
 	}
 
-	out->write( OutputKind::Info, "Compiling exclusion regexes..." );
+	Log_Info( "Compiling exclusion regexes..." );
 	// allocate all at once
 	std::vector<std::regex> exclusionREs{};
 	exclusionREs.reserve( excluded.size() );
 	for ( const auto& exclusion : excluded ) {
 		exclusionREs.emplace_back( exclusion, std::regex::ECMAScript | std::regex::icase | std::regex::optimize );
 	}
-	out->write( OutputKind::Info, fmt::format( "Done in {}", std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::high_resolution_clock::now() - start ) ) );
+	Log_Info( "Done in {}", std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::high_resolution_clock::now() - start ) );
 
 	unsigned count{ 0 };
 	unsigned errors{ 0 };
@@ -83,7 +82,7 @@ auto create( std::string_view root_, std::string_view indexLocation, const std::
 		fopen_s( &file, path.c_str(), "rb" );
 #endif
 		if (! file ) {
-			out->write( OutputKind::Error, fmt::format( "Failed to open file: {}", path ) );
+			Log_Error( "Failed to open file: {}", path );
 			continue;
 		}
 
@@ -106,20 +105,12 @@ auto create( std::string_view root_, std::string_view indexLocation, const std::
 
 		// write out entry
 		writer << fmt::format( "{}\xFF{}\xFF{}\xFF{}\xFF\xFD", pathRel, size, sha256er.getHash(), crc32er.getHash() );
-		out->write( OutputKind::Info, fmt::format( "Processed file `{}`", path ) );
+		Log_Info( "Processed file `{}`", path );
 		count += 1;
 	}
 
 	auto end{ std::chrono::high_resolution_clock::now() };
-	out->write(
-		OutputKind::Info,
-		fmt::format(
-			"Finished processing {} files in {}! (with {} errors)",
-			count,
-			std::chrono::duration_cast<std::chrono::seconds>( end - start ),
-			errors
-		)
-	);
+	Log_Info( "Finished processing {} files in {}! (with {} errors)", count, std::chrono::duration_cast<std::chrono::seconds>( end - start ), errors );
 
 	return 0;
 }

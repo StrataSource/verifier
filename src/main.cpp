@@ -6,15 +6,10 @@
 #include <memory>
 #include <vector>
 #include <argumentum/argparse.h>
-#include <fmt/format.h>
 
 #include "create.hpp"
-#include "output/CsvOutput.hpp"
-#include "output/RsvOutput.hpp"
-#include "output/JsonOutput.hpp"
-#include "output/Output.hpp"
-#include "output/SimpleOutput.hpp"
 #include "verify.hpp"
+#include "log.hpp"
 
 // the index file is encoded as `Rows-of-String-Values`
 // correct the index path with os
@@ -44,9 +39,7 @@ auto main( int argc, char* argv[] ) -> int {
 	std::string root{};
 	std::vector<std::string> excludes{};
 	std::string indexLocation{};
-	std::string format{};
 	bool overwrite{ false };
-	bool tee{ false };
 	const auto programFile{ std::filesystem::path( argv[ 0 ] ).filename() };
 
 	argumentum::argument_parser parser{};
@@ -74,67 +67,24 @@ auto main( int argc, char* argv[] ) -> int {
 		.metavar( "index-loc" )
 		.maxargs( 1 )
 		.absent( INDEX_PATH );
-	params.add_parameter( format, "--format", "-f" )
-		.help( "Output format. [simple, json, csv] default: `simple`" )
-		.metavar( "format" )
-		.choices( { "simple", "json", "csv", "rsv" } )
-		.maxargs( 1 )
-		.absent( "simple" );
 	params.add_parameter( overwrite, "--overwrite" )
 		.help( "Do not ask for confirmation for overwriting an existing index." )
 		.metavar( "overwrite" );
-	params.add_parameter( tee, "--tee" )
-		.help( "Also write the program's output to `$workDir/verifier.log`." )
-		.metavar( "tee" )
-		.absent( false );
+	params.add_parameter( g_bUIReportMode, "--ui-report" )
+		.help( "Use UI report mode logging." )
+		.metavar( "ui-report" );
 
 	if (! parser.parse_args( argc, argv, 1 ) ) {
 		return 1;
 	}
 
-	std::unique_ptr<Output> output;
-	switch ( format.at(0) ) {
-		case 's':
-			output = std::make_unique<SimpleOutput>();
-			break;
-		case 'j':
-			output = std::make_unique<JsonOutput>();
-			break;
-		case 'c':
-			output = std::make_unique<CsvOutput>();
-			break;
-		case 'r':
-			output = std::make_unique<RsvOutput>();
-			break;
-		default:
-			fmt::println( stderr, "Invalid `--format` argument: `{}`", format );
-			return 1;
-	}
 	int ret;
 
-	// `tee`, can be useful to track down a failure
-	FILE* file{ nullptr };
-	if ( tee ) {
-#ifndef _WIN32
-		file = std::fopen( "./verifier.log", "w" );
-#else
-		fopen_s( &file, "./verifier.log", "w" );
-#endif
-	}
-
-	output->init( file );
 	// `$basename started at $time` message
 	{
 		auto now{ std::time( nullptr ) };
-#ifndef _WIN32
-		auto local{ std::localtime( &now ) };
-		const auto line = fmt::format( "`{}` started at {:02d}:{:02d}:{:02d}", programFile.string(), local->tm_hour, local->tm_min, local->tm_sec );
-#else
-		tm local{};
-		localtime_s( &local, &now );
-		const auto line = fmt::format( "`{}` started at {:02d}:{:02d}:{:02d}", programFile.string(), local.tm_hour, local.tm_min, local.tm_sec );
-#endif
-		output->write( OutputKind::Info, line );
+		tm* local = std::localtime( &now );
+		Log_Info( "`{}` started at {:02d}:{:02d}:{:02d}", programFile.string(), local->tm_hour, local->tm_min, local->tm_sec );
 	}
 	if ( newIndex ) {
 		// stuff we ignore during the building of the index, the "standard" useless stuff is hardcoded
@@ -143,18 +93,15 @@ auto main( int argc, char* argv[] ) -> int {
 		excludes.emplace_back( ".*\\.vmx" );
 		excludes.emplace_back( ".*\\.log" );
 		excludes.emplace_back( ".*verifier_index\\.rsv" );
-		ret = create( root, indexLocation, excludes, overwrite, output.get() );
+		ret = create( root, indexLocation, excludes, overwrite );
 	} else {
-		// warn about stuff which shouldn't be here, don't use the `output::report` as this is a negligible user error
 		if ( overwrite )
-			fmt::println( stderr, "WARN: current action doesn't support `--overwrite`, please remove it." );
+			Log_Error( "current action doesn't support `--overwrite`, please remove it." );
 		if (! excludes.empty() )
-			fmt::println( stderr, "WARN: current action doesn't support `--exclude`, please remove it." );
+			Log_Error( "current action doesn't support `--exclude`, please remove it." );
 
-		ret = verify( root, indexLocation, output.get() );
+		ret = verify( root, indexLocation );
 	}
-	if ( file )
-		fclose( file );
 
 	return ret;
 }

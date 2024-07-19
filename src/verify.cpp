@@ -2,33 +2,32 @@
 // Created by ENDERZOMBI102 on 15/10/2023.
 //
 #include <filesystem>
-#include <fmt/chrono.h>
-#include <fmt/format.h>
 #include <fstream>
 #include <hash-library/crc32.h>
 #include <hash-library/sha256.h>
 #include <string_view>
 
 #include "verify.hpp"
+#include "log.hpp"
 
 
 static auto splitString( const std::string& string, const std::string& delim ) -> std::vector<std::string>;
 
-auto verify( std::string_view root_, std::string_view indexLocation, const Output* out ) -> int {
+auto verify( std::string_view root_, std::string_view indexLocation ) -> int {
 	const std::filesystem::path root{ root_ };
 	const std::filesystem::path indexPath{ root / indexLocation };
 
 	if (! std::filesystem::exists( indexPath ) ) {
-		out->write( OutputKind::Error, fmt::format( "Index file `{}` does not exist.", indexPath.string() ) );
+		Log_Error( "Index file `{}` does not exist.", indexPath.string() );
 		return 1;
 	}
 
-	out->write( OutputKind::Info, fmt::format( "Using index file at `{}`", indexPath.string() ) );
+	Log_Info( "Using index file at `{}`", indexPath.string() );
 
 	// open index file, if the file didn't exist, we wouldn't be here
 	std::ifstream indexStream{ indexPath, std::ios_base::in };
 	if (! indexStream.good() ) {
-		out->write( OutputKind::Error, fmt::format( "Failed to open index file for reading: N/D" ) );
+		Log_Error( "Failed to open index file for reading: N/D" );
 		return 1;
 	}
 
@@ -59,7 +58,7 @@ auto verify( std::string_view root_, std::string_view indexLocation, const Outpu
 		const auto path = root / pathRel;
 
 		if (! std::filesystem::exists( path ) ) {
-			out->report( pathRel, "Entry doesn't exist on disk.", "nul", "nul" );
+			Log_Report( pathRel, "Entry doesn't exist on disk.", "nul", "nul" );
 			errors += 1;
 			continue;
 		}
@@ -74,7 +73,7 @@ auto verify( std::string_view root_, std::string_view indexLocation, const Outpu
 		fopen_s( &file, path.string().c_str(), "rb" );
 #endif
 		if (! file ) {
-			out->write( OutputKind::Error, fmt::format( "Failed to open file: {}", path.string() ) );
+			Log_Error( "Failed to open file: {}", path.string() );
 			continue;
 		}
 
@@ -82,8 +81,8 @@ auto verify( std::string_view root_, std::string_view indexLocation, const Outpu
 
 		auto length{ std::ftell( file ) };
 		if ( length != expectedSize ) {
-			out->report( pathRel, "Sizes don't match.", std::to_string( length ), split[ 3 ] );
-			out->write( OutputKind::Info, fmt::format( "Processed entry `{}`", pathRel ) );
+			Log_Report( pathRel, "Sizes don't match.", std::to_string( length ), split[ 3 ] );
+			Log_Info( "Processed entry `{}`", pathRel );
 			entries += 1;
 			errors += 1;
 			continue;
@@ -100,30 +99,22 @@ auto verify( std::string_view root_, std::string_view indexLocation, const Outpu
 		}
 
 		if ( sha256er.getHash() != expectedSha256 ) {
-			out->report( pathRel, "Content sha256 doesn't match.", sha256er.getHash(), expectedSha256 );
+			Log_Report( pathRel, "Content sha256 doesn't match.", sha256er.getHash(), expectedSha256 );
 			errors += 1;
 		}
 
 		if ( crc32er.getHash() != expectedCrc32 ) {
-			out->report( pathRel, "Content crc32 doesn't match.", sha256er.getHash(), expectedSha256 );
+			Log_Report( pathRel, "Content crc32 doesn't match.", sha256er.getHash(), expectedSha256 );
 			errors += 1;
 		}
 
-		out->write( OutputKind::Info, fmt::format( "Processed entry `{}`", pathRel ) );
+		Log_Info( "Processed entry `{}`", pathRel );
 		entries += 1;
 	}
 	std::fclose( file );
 
 	auto end{ std::chrono::high_resolution_clock::now() };
-	out->write(
-		OutputKind::Info,
-		fmt::format(
-			"Verified {} files in {} with {} errors!",
-			entries,
-			std::chrono::duration_cast<std::chrono::seconds>( end - start ),
-			errors
-		)
-	);
+	Log_Info( "Verified {} files in {} with {} errors!", entries, std::chrono::duration_cast<std::chrono::seconds>( end - start ), errors );
 
 	return 0;
 }
