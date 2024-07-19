@@ -32,10 +32,10 @@ list( APPEND ${PROJECT_NAME}_SOURCES
 	"${CMAKE_CURRENT_LIST_DIR}/src/main.cpp"
 	"${CMAKE_CURRENT_LIST_DIR}/src/create.cpp"
 	"${CMAKE_CURRENT_LIST_DIR}/src/create.hpp"
-	"${CMAKE_CURRENT_LIST_DIR}/src/verify.cpp"
-	"${CMAKE_CURRENT_LIST_DIR}/src/verify.hpp"
 	"${CMAKE_CURRENT_LIST_DIR}/src/log.cpp"
 	"${CMAKE_CURRENT_LIST_DIR}/src/log.hpp"
+	"${CMAKE_CURRENT_LIST_DIR}/src/verify.cpp"
+	"${CMAKE_CURRENT_LIST_DIR}/src/verify.hpp"
 )
 
 # Create CLI executable

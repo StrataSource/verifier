@@ -3,13 +3,12 @@
 //
 #include <filesystem>
 #include <fstream>
+
 #include <hash-library/crc32.h>
 #include <hash-library/sha256.h>
-#include <string_view>
 
-#include "verify.hpp"
 #include "log.hpp"
-
+#include "verify.hpp"
 
 static auto splitString( const std::string& string, const std::string& delim ) -> std::vector<std::string>;
 

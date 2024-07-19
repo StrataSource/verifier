@@ -5,11 +5,12 @@
 #include <filesystem>
 #include <memory>
 #include <vector>
+
 #include <argumentum/argparse.h>
 
 #include "create.hpp"
-#include "verify.hpp"
 #include "log.hpp"
+#include "verify.hpp"
 
 // the index file is encoded as `Rows-of-String-Values`
 // correct the index path with os
@@ -54,7 +55,6 @@ auto main( int argc, char* argv[] ) -> int {
 		.absent( false );
 	params.add_parameter( root, "--root" )
 		.help( "The engine root directory." )
-		.setLongName("--root")
 		.metavar( "root" )
 		.maxargs( 1 )
 		.absent( defaultRoot );
@@ -78,14 +78,14 @@ auto main( int argc, char* argv[] ) -> int {
 		return 1;
 	}
 
-	int ret;
-
 	// `$basename started at $time` message
 	{
 		auto now{ std::time( nullptr ) };
 		tm* local = std::localtime( &now );
 		Log_Info( "`{}` started at {:02d}:{:02d}:{:02d}", programFile.string(), local->tm_hour, local->tm_min, local->tm_sec );
 	}
+
+	int ret;
 	if ( newIndex ) {
 		// stuff we ignore during the building of the index, the "standard" useless stuff is hardcoded
 		excludes.emplace_back( "sdk_content.*" );
