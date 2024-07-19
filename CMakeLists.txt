@@ -30,20 +30,12 @@ endif()
 # Add sources for CLI executable
 list( APPEND ${PROJECT_NAME}_SOURCES
 	"${CMAKE_CURRENT_LIST_DIR}/src/main.cpp"
-	"${CMAKE_CURRENT_LIST_DIR}/src/output/Output.cpp"
-	"${CMAKE_CURRENT_LIST_DIR}/src/output/Output.hpp"
-	"${CMAKE_CURRENT_LIST_DIR}/src/output/CsvOutput.cpp"
-	"${CMAKE_CURRENT_LIST_DIR}/src/output/CsvOutput.hpp"
-	"${CMAKE_CURRENT_LIST_DIR}/src/output/JsonOutput.cpp"
-	"${CMAKE_CURRENT_LIST_DIR}/src/output/JsonOutput.hpp"
-	"${CMAKE_CURRENT_LIST_DIR}/src/output/SimpleOutput.cpp"
-	"${CMAKE_CURRENT_LIST_DIR}/src/output/SimpleOutput.hpp"
-	"${CMAKE_CURRENT_LIST_DIR}/src/output/RsvOutput.cpp"
-	"${CMAKE_CURRENT_LIST_DIR}/src/output/RsvOutput.hpp"
 	"${CMAKE_CURRENT_LIST_DIR}/src/create.cpp"
 	"${CMAKE_CURRENT_LIST_DIR}/src/create.hpp"
 	"${CMAKE_CURRENT_LIST_DIR}/src/verify.cpp"
 	"${CMAKE_CURRENT_LIST_DIR}/src/verify.hpp"
+	"${CMAKE_CURRENT_LIST_DIR}/src/log.cpp"
+	"${CMAKE_CURRENT_LIST_DIR}/src/log.hpp"
 )
 
 # Create CLI executable
