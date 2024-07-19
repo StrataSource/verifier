@@ -90,9 +90,8 @@ auto verify( std::string_view root_, std::string_view indexLocation ) -> int {
 
 		SHA256 sha256er{};
 		CRC32 crc32er{};
-		unsigned char buffer[16] { 0 };
-		unsigned count;
-		while ( (count = std::fread( buffer, 1, 16, file )) != 0 ) {
+		unsigned char buffer[2048];
+		while ( unsigned int count = std::fread( buffer, 1, sizeof( buffer ), file ) ) {
 			sha256er.add( buffer, count );
 			crc32er.add( buffer, count );
 		}
