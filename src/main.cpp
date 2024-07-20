@@ -43,6 +43,8 @@ auto main( int argc, char* argv[] ) -> int {
 	std::vector<std::string> fileIncludes;
 	std::vector<std::string> archiveExcludes;
 	std::vector<std::string> archiveIncludes;
+	std::string steamDepotConfig;
+	std::vector<std::string> steamDepotIDs;
 	std::string indexLocation;
 	bool overwrite{ false };
 	const auto programFile{ std::filesystem::path( argv[ 0 ] ).filename() };
@@ -71,15 +73,22 @@ auto main( int argc, char* argv[] ) -> int {
 		.metavar( "excluded" )
 		.minargs( 1 );
 	params.add_parameter( fileIncludes, "--include" )
-		.help( "RegExp pattern(s) to include files when creating the index. If not present, all files not matching an exclusion will be included." )
+		.help( "RegExp pattern(s) to include files when creating the index. If not present, all files not matching an exclusion will be included.")
 		.metavar( "included" );
 	params.add_parameter( archiveExcludes, "--exclude-archives", "-E" )
-		.help( "RegExp pattern(s) to exclude VPKs when creating the index." )
+		.help( "RegExp pattern(s) to exclude VPKs when creating the index. Ignored if `--steam-depot-config` is present." )
 		.metavar( "excluded-archives" )
 		.minargs( 1 );
 	params.add_parameter( archiveIncludes, "--include-archives" )
 		.help( "RegExp pattern(s) to include VPKs when creating the index. If not present, all VPKs not matching an exclusion will be included." )
 		.metavar( "included-archives" );
+	params.add_parameter( steamDepotConfig, "--steam-depot-config" )
+		.help( "Use a Steam depot configuration file to include/exclude content. Pair this option with `--steam-depot-ids`." )
+		.metavar( "steam-depot-config" )
+		.maxargs( 1 );
+	params.add_parameter( steamDepotIDs, "--steam-depot-ids" )
+		.help( "The Steam depot IDs to include the content of. These should correspond with keys in the depots section of the Steam depot configuration file. Pair this option with `--steam-depot-config`." )
+		.metavar( "steam-depot-ids" );
 	params.add_parameter( indexLocation, "--index", "-i" )
 		.help( "The index file to use." )
 		.metavar( "index-loc" )
@@ -109,7 +118,6 @@ auto main( int argc, char* argv[] ) -> int {
 		Log_Info( "`{}` started at {:02d}:{:02d}:{:02d}", programFile.string(), localPtr->tm_hour, localPtr->tm_min, localPtr->tm_sec );
 	}
 
-	int ret;
 	if ( newIndex ) {
 		if ( const auto indexPath{ std::filesystem::path{ root } / indexLocation }; std::filesystem::exists( indexPath ) ) {
 			if (! overwrite ) {
@@ -121,7 +129,7 @@ auto main( int argc, char* argv[] ) -> int {
 					return 1;
 				}
 			} else {
-				Log_Warn( "Index file `{}` already exists, will be overwritten.", indexPath.string() );
+				Log_Warn( "Index file `{}` already exists, it will be overwritten.", indexPath.string() );
 			}
 			// clear contents
 			std::ofstream writer{ indexPath, std::ios::out | std::ios::trunc };
@@ -134,15 +142,39 @@ auto main( int argc, char* argv[] ) -> int {
 		fileExcludes.emplace_back( ".*\\.log" );
 		fileExcludes.emplace_back( ".*verifier_index\\.rsv" );
 
-		ret = createFromRoot( root, indexLocation, skipArchives, fileExcludes, fileIncludes, archiveExcludes, archiveIncludes );
-	} else {
-		if ( overwrite )
-			Log_Error( "current action doesn't support `--overwrite`, please remove it." );
-		if ( !fileExcludes.empty() )
-			Log_Error( "current action doesn't support `--exclude`, please remove it." );
+		// create from a steam depot config
+		if ( !steamDepotConfig.empty() || !steamDepotIDs.empty() ) {
+			if ( steamDepotConfig.empty() && !steamDepotIDs.empty() ) {
+				Log_Warn( "`--steam-depot-config` must be set when `--steam-depot-ids` is used." );
+				return 1;
+			}
+			if ( !steamDepotConfig.empty() && steamDepotIDs.empty() ) {
+				Log_Warn( "`--steam-depot-ids` must be set when `--steam-depot-config` is used." );
+				return 1;
+			}
 
-		ret = verify( root, indexLocation );
+			return createFromSteamDepotConfigs( steamDepotConfig, steamDepotIDs, indexLocation, skipArchives, fileExcludes, fileIncludes, archiveExcludes, archiveIncludes );
+		}
+
+		return createFromRoot( root, indexLocation, skipArchives, fileExcludes, fileIncludes, archiveExcludes, archiveIncludes );
 	}
 
-	return ret;
+	if ( skipArchives )
+		Log_Warn( "The current action doesn't support `--skip-archives`, it will be ignored." );
+	if (! fileExcludes.empty() )
+		Log_Warn( "The current action doesn't support `--exclude`, it will be ignored." );
+	if (! fileIncludes.empty() )
+		Log_Warn( "The current action doesn't support `--include`, it will be ignored." );
+	if (! archiveExcludes.empty() )
+		Log_Warn( "The current action doesn't support `--exclude-archives`, it will be ignored." );
+	if (! archiveIncludes.empty() )
+		Log_Warn( "The current action doesn't support `--include-archives`, it will be ignored." );
+	if (! steamDepotConfig.empty() )
+		Log_Warn( "The current action doesn't support `--steam-depot-config`, it will be ignored." );
+	if (! steamDepotIDs.empty() )
+		Log_Warn( "The current action doesn't support `--steam-depot-ids`, it will be ignored." );
+	if ( overwrite )
+		Log_Warn( "The current action doesn't support `--overwrite`, it will be ignored." );
+
+	return verify( root, indexLocation );
 }

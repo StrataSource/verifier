@@ -107,7 +107,7 @@ auto verify( std::string_view root_, std::string_view indexLocation ) -> int {
 		CryptoPP::SHA1 sha1er{};
 		CryptoPP::CRC32 crc32er{};
 
-		unsigned char buffer[2048];
+		unsigned char buffer[ 2048 ];
 		while ( auto count = std::fread( buffer, 1, sizeof( buffer ), file ) ) {
 			sha1er.Update( buffer, count );
 			crc32er.Update( buffer, count );
