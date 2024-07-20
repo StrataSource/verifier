@@ -24,7 +24,7 @@ using sourcepp::parser::text::isNumber;
 
 static auto enterVPK( std::ofstream& writer, std::string_view vpkPath, std::string_view vpkPathRel, const std::vector<std::regex>& exclusions ) -> bool;
 
-auto create( std::string_view root_, std::string_view indexLocation, bool parseArchives, const std::vector<std::string>& excluded, bool overwrite ) -> int {
+auto create( std::string_view root_, std::string_view indexLocation, bool skipArchives, const std::vector<std::string>& excluded, bool overwrite ) -> int {
 	const std::filesystem::path root{ root_ };
 	const std::filesystem::path indexPath{ root / indexLocation };
 
@@ -59,7 +59,7 @@ auto create( std::string_view root_, std::string_view indexLocation, bool parseA
 	for ( const auto& exclusion : excluded ) {
 		exclusionREs.emplace_back( exclusion, std::regex::ECMAScript | std::regex::icase | std::regex::optimize );
 	}
-	if ( parseArchives ) {
+	if (! skipArchives ) {
 		exclusionREs.emplace_back( R"(.*_[0-9][0-9][0-9]\.vpk)", std::regex::ECMAScript | std::regex::icase | std::regex::optimize );
 	}
 	Log_Info( "Done in {}", std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::high_resolution_clock::now() - start ) );
@@ -89,7 +89,7 @@ auto create( std::string_view root_, std::string_view indexLocation, bool parseA
 		if ( breaker )
 			continue;
 
-		if ( parseArchives && path.ends_with( ".vpk" ) ) {
+		if ( !skipArchives && path.ends_with( ".vpk" ) ) {
 			// We've already ignored numbered archives in the exclusion regexes
 			if ( enterVPK( writer, path, pathRel, exclusionREs ) ) {
 				Log_Info( "Processed VPK at `{}`", path );
