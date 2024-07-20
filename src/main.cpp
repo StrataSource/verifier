@@ -81,8 +81,14 @@ auto main( int argc, char* argv[] ) -> int {
 	// `$basename started at $time` message
 	{
 		auto now{ std::time( nullptr ) };
-		tm* local = std::localtime( &now );
-		Log_Info( "`{}` started at {:02d}:{:02d}:{:02d}", programFile.string(), local->tm_hour, local->tm_min, local->tm_sec );
+#ifndef _WIN32
+		auto localPtr{ std::localtime( &now ) };
+#else
+		tm local{};
+		localtime_s( &local, &now );
+		auto* localPtr{ &local };
+#endif
+		Log_Info( "`{}` started at {:02d}:{:02d}:{:02d}", programFile.string(), localPtr->tm_hour, localPtr->tm_min, localPtr->tm_sec );
 	}
 
 	int ret;
