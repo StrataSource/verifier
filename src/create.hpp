@@ -6,4 +6,4 @@
 #include <string_view>
 #include <vector>
 
-auto create( std::string_view root, std::string_view indexLocation, bool skipArchives, const std::vector<std::string>& excluded, bool overwrite ) -> int;
+auto createFromRoot( std::string_view root, std::string_view indexLocation, bool skipArchives, const std::vector<std::string>& excluded, const std::vector<std::string>& included ) -> int;

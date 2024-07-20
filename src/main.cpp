@@ -37,10 +37,11 @@ auto main( int argc, char* argv[] ) -> int {
 	}
 
 	bool newIndex{ false };
-	std::string root{};
+	std::string root;
 	bool skipArchives{ false };
-	std::vector<std::string> excludes{};
-	std::string indexLocation{};
+	std::vector<std::string> excludes;
+	std::vector<std::string> includes;
+	std::string indexLocation;
 	bool overwrite{ false };
 	const auto programFile{ std::filesystem::path( argv[ 0 ] ).filename() };
 
@@ -67,6 +68,9 @@ auto main( int argc, char* argv[] ) -> int {
 		.help( "RegExp pattern(s) to exclude files when creating the index." )
 		.metavar( "excluded" )
 		.minargs( 1 );
+	params.add_parameter( includes, "--include" )
+		.help( "RegExp pattern(s) to include files when creating the index. If not present, all files not matching an exclusion will be included." )
+		.metavar( "included" );
 	params.add_parameter( indexLocation, "--index", "-i" )
 		.help( "The index file to use." )
 		.metavar( "index-loc" )
@@ -98,13 +102,30 @@ auto main( int argc, char* argv[] ) -> int {
 
 	int ret;
 	if ( newIndex ) {
+		if ( const auto indexPath{ std::filesystem::path{ root } / indexLocation }; std::filesystem::exists( indexPath ) ) {
+			if (! overwrite ) {
+				Log_Error( "Index file `{}` already exists, do you want to overwrite it? (y/N)", indexPath.string() );
+				std::string input;
+				std::cin >> input;
+				if ( input != "y" && input != "Y" ) {
+					Log_Info( "Aborting." );
+					return 1;
+				}
+			} else {
+				Log_Warn( "Index file `{}` already exists, will be overwritten.", indexPath.string() );
+			}
+			// clear contents
+			std::ofstream writer{ indexPath, std::ios::out | std::ios::trunc };
+		}
+
 		// stuff we ignore during the building of the index, the "standard" useless stuff is hardcoded
 		excludes.emplace_back( "sdk_content.*" );
 		excludes.emplace_back( ".*\\.vmf_autosave.*" );
 		excludes.emplace_back( ".*\\.vmx" );
 		excludes.emplace_back( ".*\\.log" );
 		excludes.emplace_back( ".*verifier_index\\.rsv" );
-		ret = create( root, indexLocation, skipArchives, excludes, overwrite );
+
+		ret = createFromRoot( root, indexLocation, skipArchives, excludes, includes );
 	} else {
 		if ( overwrite )
 			Log_Error( "current action doesn't support `--overwrite`, please remove it." );
