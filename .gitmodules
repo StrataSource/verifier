@@ -1,9 +1,9 @@
 [submodule "src/thirdparty/argumentum"]
 	path = src/thirdparty/argumentum
 	url = https://github.com/mmahnic/argumentum
-[submodule "src/thirdparty/hash-library"]
-	path = src/thirdparty/hash-library
-	url = https://github.com/stbrumme/hash-library
 [submodule "src/thirdparty/fmt"]
 	path = src/thirdparty/fmt
 	url = https://github.com/fmtlib/fmt
+[submodule "src/thirdparty/sourcepp"]
+	path = src/thirdparty/sourcepp
+	url = https://github.com/craftablescience/sourcepp

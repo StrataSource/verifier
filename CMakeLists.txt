@@ -44,7 +44,7 @@ target_compile_definitions( ${PROJECT_NAME} PRIVATE $<$<CONFIG:Debug>:DEBUG> "VE
 
 # Link to CLI dependencies
 include( "${CMAKE_CURRENT_SOURCE_DIR}/src/thirdparty/CMakeLists.txt" )
-target_link_libraries( ${PROJECT_NAME} PRIVATE Argumentum::argumentum fmt::fmt hash-library )
+target_link_libraries( ${PROJECT_NAME} PRIVATE Argumentum::argumentum cryptopp::cryptopp fmt::fmt vpkpp)
 
 # Create GUI executable
 if( VERIFIER_BUILD_UI )
