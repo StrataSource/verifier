@@ -15,6 +15,7 @@
 #include <cryptopp/hex.h>
 #include <cryptopp/sha.h>
 #include <sourcepp/parser/Text.h>
+#include <sourcepp/string/String.h>
 #include <vpkpp/format/VPK.h>
 
 #include "log.hpp"
@@ -68,7 +69,8 @@ auto create( std::string_view root_, std::string_view indexLocation, bool parseA
 	// read and create index
 	std::filesystem::recursive_directory_iterator iterator{ root };
 	for ( const auto& entry : iterator ) {
-		const auto& path{ entry.path().string() };
+		auto path{ entry.path().string() };
+		sourcepp::string::normalizeSlashes( path );
 
 		if (! std::filesystem::is_regular_file( path ) ) {
 			continue;
@@ -171,7 +173,7 @@ static auto enterVPK( std::ofstream& writer, std::string_view vpkPath, std::stri
 
 			auto entryData = vpk->readEntry( entry );
 			if (! entryData ) {
-				Log_Error( "Failed to open file: `{}{}{}`", vpkPath, static_cast<char>( std::filesystem::path::preferred_separator ), entry.path );
+				Log_Error( "Failed to open file: `{}/{}`", vpkPath, entry.path );
 				continue;
 			}
 
@@ -190,7 +192,7 @@ static auto enterVPK( std::ofstream& writer, std::string_view vpkPath, std::stri
 
 			// write out entry
 			writer << fmt::format( "{}\xFF{}\xFF{}\xFF{}\xFF{}\xFF\xFD", vpkPathRel, entry.path, entryData->size(), sha256HashStr, crc32HashStr );
-			Log_Info( "Processed file `{}{}{}`", vpkPath, static_cast<char>( std::filesystem::path::preferred_separator ), entry.path );
+			Log_Info( "Processed file `{}/{}`", vpkPath, entry.path );
 		}
 	}
 
