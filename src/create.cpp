@@ -121,31 +121,31 @@ auto createFromRoot( std::string_view root_, std::string_view indexLocation, boo
 		const auto size{ std::ftell( file ) };
 		std::fseek( file, 0, 0 );
 
-		// sha256/crc32
-		CryptoPP::SHA256 sha256er{};
+		// sha1/crc32
+		CryptoPP::SHA1 sha1er{};
 		CryptoPP::CRC32 crc32er{};
 
 		unsigned char buffer[2048];
 		while ( auto bufCount = std::fread( buffer, 1, sizeof( buffer ), file ) ) {
-			sha256er.Update( buffer, bufCount );
+			sha1er.Update( buffer, bufCount );
 			crc32er.Update( buffer, bufCount );
 		}
 		std::fclose( file );
 
-		std::array<CryptoPP::byte, CryptoPP::SHA256::DIGESTSIZE> sha256Hash{};
-		sha256er.Final( sha256Hash.data() );
+		std::array<CryptoPP::byte, CryptoPP::SHA1::DIGESTSIZE> sha1Hash{};
+		sha1er.Final( sha1Hash.data() );
 		std::array<CryptoPP::byte, CryptoPP::CRC32::DIGESTSIZE> crc32Hash{};
 		crc32er.Final( crc32Hash.data() );
 
-		std::string sha256HashStr;
+		std::string sha1HashStr;
 		std::string crc32HashStr;
 		{
-			CryptoPP::StringSource sha256HashStrSink{ sha256Hash.data(), sha256Hash.size(), true, new CryptoPP::HexEncoder{ new CryptoPP::StringSink{ sha256HashStr } } };
+			CryptoPP::StringSource sha1HashStrSink{ sha1Hash.data(), sha1Hash.size(), true, new CryptoPP::HexEncoder{ new CryptoPP::StringSink{ sha1HashStr } } };
 			CryptoPP::StringSource crc32HashStrSink{ crc32Hash.data(), crc32Hash.size(), true, new CryptoPP::HexEncoder{ new CryptoPP::StringSink{ crc32HashStr } } };
 		}
 
 		// write out entry
-		writer << fmt::format( ".\xFF{}\xFF{}\xFF{}\xFF{}\xFF\xFD", pathRel, size, sha256HashStr, crc32HashStr );
+		writer << fmt::format( ".\xFF{}\xFF{}\xFF{}\xFF{}\xFF\xFD", pathRel, size, sha1HashStr, crc32HashStr );
 		Log_Info( "Processed file `{}`", path );
 		count += 1;
 	}
@@ -193,21 +193,21 @@ static auto enterVPK( std::ofstream& writer, std::string_view vpkPath, std::stri
 				continue;
 			}
 
-			// sha256 (crc32 is already computed)
-			CryptoPP::SHA256 sha256er{};
-			sha256er.Update( reinterpret_cast<const CryptoPP::byte*>( entryData->data() ), entryData->size() );
-			std::array<CryptoPP::byte, CryptoPP::SHA256::DIGESTSIZE> sha256Hash{};
-			sha256er.Final( sha256Hash.data() );
+			// sha1 (crc32 is already computed)
+			CryptoPP::SHA1 sha1er{};
+			sha1er.Update( reinterpret_cast<const CryptoPP::byte*>( entryData->data() ), entryData->size() );
+			std::array<CryptoPP::byte, CryptoPP::SHA1::DIGESTSIZE> sha1Hash{};
+			sha1er.Final( sha1Hash.data() );
 
-			std::string sha256HashStr;
+			std::string sha1HashStr;
 			std::string crc32HashStr;
 			{
-				CryptoPP::StringSource sha256HashStrSink{ sha256Hash.data(), sha256Hash.size(), true, new CryptoPP::HexEncoder{ new CryptoPP::StringSink{ sha256HashStr } } };
+				CryptoPP::StringSource sha1HashStrSink{ sha1Hash.data(), sha1Hash.size(), true, new CryptoPP::HexEncoder{ new CryptoPP::StringSink{ sha1HashStr } } };
 				CryptoPP::StringSource crc32HashStrSink{ reinterpret_cast<const CryptoPP::byte*>( &entry.crc32 ), sizeof( entry.crc32 ), true, new CryptoPP::HexEncoder{ new CryptoPP::StringSink{ crc32HashStr } } };
 			}
 
 			// write out entry
-			writer << fmt::format( "{}\xFF{}\xFF{}\xFF{}\xFF{}\xFF\xFD", vpkPathRel, entry.path, entryData->size(), sha256HashStr, crc32HashStr );
+			writer << fmt::format( "{}\xFF{}\xFF{}\xFF{}\xFF{}\xFF\xFD", vpkPathRel, entry.path, entryData->size(), sha1HashStr, crc32HashStr );
 			Log_Info( "Processed file `{}/{}`", vpkPath, entry.path );
 		}
 	}
