@@ -1,14 +1,19 @@
 //
 // Created by ENDERZOMBI102 on 15/10/2023.
 //
+#include "verify.hpp"
+
+#include <array>
 #include <filesystem>
 #include <fstream>
 
-#include <hash-library/crc32.h>
-#include <hash-library/sha256.h>
+#include <cryptopp/crc.h>
+#include <cryptopp/filters.h>
+#include <cryptopp/hex.h>
+#include <cryptopp/sha.h>
+#include <sourcepp/crypto/String.h>
 
 #include "log.hpp"
-#include "verify.hpp"
 
 static auto splitString( const std::string& string, const std::string& delim ) -> std::vector<std::string>;
 
@@ -88,21 +93,35 @@ auto verify( std::string_view root_, std::string_view indexLocation ) -> int {
 		}
 		std::fseek( file, 0, 0 );
 
-		SHA256 sha256er{};
-		CRC32 crc32er{};
+		// sha256/crc32
+		CryptoPP::SHA256 sha256er{};
+		CryptoPP::CRC32 crc32er{};
+
 		unsigned char buffer[2048];
 		while ( unsigned int count = std::fread( buffer, 1, sizeof( buffer ), file ) ) {
-			sha256er.add( buffer, count );
-			crc32er.add( buffer, count );
+			sha256er.Update( buffer, count );
+			crc32er.Update( buffer, count );
 		}
 
-		if ( sha256er.getHash() != expectedSha256 ) {
-			Log_Report( pathRel, "Content sha256 doesn't match.", sha256er.getHash(), expectedSha256 );
+		std::array<CryptoPP::byte, CryptoPP::SHA256::DIGESTSIZE> sha256Hash{};
+		sha256er.Final(sha256Hash.data());
+		std::array<CryptoPP::byte, CryptoPP::CRC32::DIGESTSIZE> crc32Hash{};
+		crc32er.Final(crc32Hash.data());
+
+		std::string sha256HashStr;
+		std::string crc32HashStr;
+		{
+			CryptoPP::StringSource sha256HashStrSink{ sha256Hash.data(), sha256Hash.size(), true, new CryptoPP::HexEncoder{ new CryptoPP::StringSink{ sha256HashStr } } };
+			CryptoPP::StringSource crc32HashStrSink{ crc32Hash.data(), crc32Hash.size(), true, new CryptoPP::HexEncoder{ new CryptoPP::StringSink{ crc32HashStr } } };
+		}
+
+		if ( sha256HashStr != expectedSha256 ) {
+			Log_Report( pathRel, "Content sha256 doesn't match.", sha256HashStr, expectedSha256 );
 			errors += 1;
 		}
 
-		if ( crc32er.getHash() != expectedCrc32 ) {
-			Log_Report( pathRel, "Content crc32 doesn't match.", sha256er.getHash(), expectedSha256 );
+		if ( crc32HashStr != expectedCrc32 ) {
+			Log_Report( pathRel, "Content crc32 doesn't match.", crc32HashStr, expectedCrc32 );
 			errors += 1;
 		}
 

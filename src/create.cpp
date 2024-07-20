@@ -1,16 +1,20 @@
 //
 // Created by ENDERZOMBI102 on 15/10/2023.
 //
+#include "create.hpp"
+
+#include <array>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <regex>
 #include <string_view>
 
-#include <hash-library/crc32.h>
-#include <hash-library/sha256.h>
+#include <cryptopp/crc.h>
+#include <cryptopp/filters.h>
+#include <cryptopp/hex.h>
+#include <cryptopp/sha.h>
 
-#include "create.hpp"
 #include "log.hpp"
 
 auto create( std::string_view root_, std::string_view indexLocation, const std::vector<std::string>& excluded, bool overwrite ) noexcept -> int {
@@ -93,17 +97,30 @@ auto create( std::string_view root_, std::string_view indexLocation, const std::
 		std::fseek( file, 0, 0 );
 
 		// sha256/crc32
-		SHA256 sha256er{};
-		CRC32 crc32er{};
+		CryptoPP::SHA256 sha256er{};
+		CryptoPP::CRC32 crc32er{};
+
 		unsigned char buffer[2048];
 		while ( unsigned int bufCount = std::fread( buffer, 1, sizeof( buffer ), file ) ) {
-			sha256er.add( buffer, bufCount );
-			crc32er.add( buffer, bufCount );
+			sha256er.Update( buffer, bufCount );
+			crc32er.Update( buffer, bufCount );
 		}
 		std::fclose( file );
 
+		std::array<CryptoPP::byte, CryptoPP::SHA256::DIGESTSIZE> sha256Hash{};
+		sha256er.Final(sha256Hash.data());
+		std::array<CryptoPP::byte, CryptoPP::CRC32::DIGESTSIZE> crc32Hash{};
+		crc32er.Final(crc32Hash.data());
+
+		std::string sha256HashStr;
+		std::string crc32HashStr;
+		{
+			CryptoPP::StringSource sha256HashStrSink{ sha256Hash.data(), sha256Hash.size(), true, new CryptoPP::HexEncoder{ new CryptoPP::StringSink{ sha256HashStr } } };
+			CryptoPP::StringSource crc32HashStrSink{ crc32Hash.data(), crc32Hash.size(), true, new CryptoPP::HexEncoder{ new CryptoPP::StringSink{ crc32HashStr } } };
+		}
+
 		// write out entry
-		writer << fmt::format( "{}\xFF{}\xFF{}\xFF{}\xFF\xFD", pathRel, size, sha256er.getHash(), crc32er.getHash() );
+		writer << fmt::format( "{}\xFF{}\xFF{}\xFF{}\xFF\xFD", pathRel, size, sha256HashStr, crc32HashStr );
 		Log_Info( "Processed file `{}`", path );
 		count += 1;
 	}
