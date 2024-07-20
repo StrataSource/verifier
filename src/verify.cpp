@@ -16,7 +16,7 @@
 
 #include "log.hpp"
 
-static auto verifyArchivedFile( const std::string& archivePath, const std::string& entryPath, std::uint64_t expectedSize, std::string_view expectedSha256, std::string_view expectedCrc32, unsigned int& entries, unsigned int& errors ) -> void;
+static auto verifyArchivedFile( const std::string& archivePath, const std::string& entryPath, std::uint64_t expectedSize, std::string_view expectedSha1, std::string_view expectedCrc32, unsigned int& entries, unsigned int& errors ) -> void;
 
 static auto splitString( const std::string& string, const std::string& delim ) -> std::vector<std::string>;
 
@@ -59,7 +59,7 @@ auto verify( std::string_view root_, std::string_view indexLocation ) -> int {
 		const auto& archive{ split[ 0 ] };
 		const auto& pathRel{ split[ 1 ] };
 		const auto expectedSize{ std::stoull( split[ 2 ] ) };
-		const auto& expectedSha256{ split[ 3 ] };
+		const auto& expectedSha1{ split[ 3 ] };
 		const auto& expectedCrc32{ split[ 4 ] };
 
 		// verify it
@@ -73,7 +73,7 @@ auto verify( std::string_view root_, std::string_view indexLocation ) -> int {
 		}
 
 		if ( insideArchive ) {
-			verifyArchivedFile( path.string(), pathRel, expectedSize, expectedSha256, expectedCrc32, entries, errors );
+			verifyArchivedFile( path.string(), pathRel, expectedSize, expectedSha1, expectedCrc32, entries, errors );
 			continue;
 		}
 
@@ -103,30 +103,30 @@ auto verify( std::string_view root_, std::string_view indexLocation ) -> int {
 		}
 		std::fseek( file, 0, 0 );
 
-		// sha256/crc32
-		CryptoPP::SHA256 sha256er{};
+		// sha1/crc32
+		CryptoPP::SHA1 sha1er{};
 		CryptoPP::CRC32 crc32er{};
 
 		unsigned char buffer[2048];
 		while ( auto count = std::fread( buffer, 1, sizeof( buffer ), file ) ) {
-			sha256er.Update( buffer, count );
+			sha1er.Update( buffer, count );
 			crc32er.Update( buffer, count );
 		}
 
-		std::array<CryptoPP::byte, CryptoPP::SHA256::DIGESTSIZE> sha256Hash{};
-		sha256er.Final( sha256Hash.data() );
+		std::array<CryptoPP::byte, CryptoPP::SHA1::DIGESTSIZE> sha1Hash{};
+		sha1er.Final( sha1Hash.data() );
 		std::array<CryptoPP::byte, CryptoPP::CRC32::DIGESTSIZE> crc32Hash{};
 		crc32er.Final( crc32Hash.data() );
 
-		std::string sha256HashStr;
+		std::string sha1HashStr;
 		std::string crc32HashStr;
 		{
-			CryptoPP::StringSource sha256HashStrSink{ sha256Hash.data(), sha256Hash.size(), true, new CryptoPP::HexEncoder{ new CryptoPP::StringSink{ sha256HashStr } } };
+			CryptoPP::StringSource sha1HashStrSink{ sha1Hash.data(), sha1Hash.size(), true, new CryptoPP::HexEncoder{ new CryptoPP::StringSink{ sha1HashStr } } };
 			CryptoPP::StringSource crc32HashStrSink{ crc32Hash.data(), crc32Hash.size(), true, new CryptoPP::HexEncoder{ new CryptoPP::StringSink{ crc32HashStr } } };
 		}
 
-		if ( sha256HashStr != expectedSha256 ) {
-			Log_Report( pathRel, "Content sha256 doesn't match.", sha256HashStr, expectedSha256 );
+		if ( sha1HashStr != expectedSha1 ) {
+			Log_Report( pathRel, "Content sha1 doesn't match.", sha1HashStr, expectedSha1 );
 			errors += 1;
 		}
 
@@ -146,7 +146,7 @@ auto verify( std::string_view root_, std::string_view indexLocation ) -> int {
 	return 0;
 }
 
-static auto verifyArchivedFile( const std::string& archivePath, const std::string& entryPath, std::uint64_t expectedSize, std::string_view expectedSha256, std::string_view expectedCrc32, unsigned int& entries, unsigned int& errors ) -> void {
+static auto verifyArchivedFile( const std::string& archivePath, const std::string& entryPath, std::uint64_t expectedSize, std::string_view expectedSha1, std::string_view expectedCrc32, unsigned int& entries, unsigned int& errors ) -> void {
 	using namespace vpkpp;
 
 	static std::unordered_map<std::string, std::unique_ptr<PackFile>> loadedVPKs{};
@@ -181,21 +181,21 @@ static auto verifyArchivedFile( const std::string& archivePath, const std::strin
 		return;
 	}
 
-	// sha256 (crc32 is already computed)
-	CryptoPP::SHA256 sha256er{};
-	sha256er.Update( reinterpret_cast<const CryptoPP::byte*>( entryData->data() ), entryData->size() );
-	std::array<CryptoPP::byte, CryptoPP::SHA256::DIGESTSIZE> sha256Hash{};
-	sha256er.Final( sha256Hash.data() );
+	// sha1 (crc32 is already computed)
+	CryptoPP::SHA1 sha1er{};
+	sha1er.Update( reinterpret_cast<const CryptoPP::byte*>( entryData->data() ), entryData->size() );
+	std::array<CryptoPP::byte, CryptoPP::SHA1::DIGESTSIZE> sha1Hash{};
+	sha1er.Final( sha1Hash.data() );
 
-	std::string sha256HashStr;
+	std::string sha1HashStr;
 	std::string crc32HashStr;
 	{
-		CryptoPP::StringSource sha256HashStrSink{ sha256Hash.data(), sha256Hash.size(), true, new CryptoPP::HexEncoder{ new CryptoPP::StringSink{ sha256HashStr } } };
+		CryptoPP::StringSource sha1HashStrSink{ sha1Hash.data(), sha1Hash.size(), true, new CryptoPP::HexEncoder{ new CryptoPP::StringSink{ sha1HashStr } } };
 		CryptoPP::StringSource crc32HashStrSink{ reinterpret_cast<const CryptoPP::byte*>( &entry->crc32 ), sizeof( entry->crc32 ), true, new CryptoPP::HexEncoder{ new CryptoPP::StringSink{ crc32HashStr } } };
 	}
 
-	if ( sha256HashStr != expectedSha256 ) {
-		Log_Report( fullPath, "Content sha256 doesn't match.", sha256HashStr, expectedSha256 );
+	if ( sha1HashStr != expectedSha1 ) {
+		Log_Report( fullPath, "Content sha1 doesn't match.", sha1HashStr, expectedSha1 );
 		errors += 1;
 	}
 
