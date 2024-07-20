@@ -49,7 +49,7 @@ auto verify( std::string_view root_, std::string_view indexLocation ) -> int {
 		const auto split{ splitString( line.str(), "\xFF" ) };
 		// deserialize row
 		const auto& pathRel{ split[ 0 ] };
-		const auto expectedSize{ strtoull( split[ 1 ].c_str(), nullptr, 10 ) };
+		const auto expectedSize{ std::stoull( split[ 1 ] ) };
 		const auto& expectedSha256{ split[ 2 ] };
 		const auto& expectedCrc32{ split[ 3 ] };
 
@@ -66,7 +66,7 @@ auto verify( std::string_view root_, std::string_view indexLocation ) -> int {
 		if ( file )
 			std::fclose( file );
 #ifndef _WIN32
-		std::FILE* file{ std::fopen( path.string().c_str(), "rb" ) };
+		file = std::fopen( path.string().c_str(), "rb" );
 #else
 		file = nullptr;
 		fopen_s( &file, path.string().c_str(), "rb" );
