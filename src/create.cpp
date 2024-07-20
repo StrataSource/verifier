@@ -20,8 +20,6 @@
 
 #include "log.hpp"
 
-using sourcepp::parser::text::isNumber;
-
 static auto enterVPK( std::ofstream& writer, std::string_view vpkPath, std::string_view vpkPathRel, const std::vector<std::regex>& excluded, const std::vector<std::regex>& included ) -> bool;
 
 auto createFromRoot( std::string_view root_, std::string_view indexLocation, bool skipArchives, const std::vector<std::string>& excluded, const std::vector<std::string>& included ) -> int {
@@ -39,7 +37,7 @@ auto createFromRoot( std::string_view root_, std::string_view indexLocation, boo
 	}
 
 	Log_Info( "Compiling exclusion regexes..." );
-	std::vector<std::regex> exclusionREs{};
+	std::vector<std::regex> exclusionREs;
 	exclusionREs.reserve( excluded.size() );
 	for ( const auto& exclusion : excluded ) {
 		exclusionREs.emplace_back( exclusion, std::regex::ECMAScript | std::regex::icase | std::regex::optimize );
@@ -49,7 +47,7 @@ auto createFromRoot( std::string_view root_, std::string_view indexLocation, boo
 	}
 
 	Log_Info( "Compiling inclusion regexes..." );
-	std::vector<std::regex> inclusionREs{};
+	std::vector<std::regex> inclusionREs;
 	if (! included.empty() ) {
 		inclusionREs.reserve( included.size() );
 		for ( const auto& inclusion: included ) {
@@ -127,7 +125,7 @@ auto createFromRoot( std::string_view root_, std::string_view indexLocation, boo
 		CryptoPP::CRC32 crc32er{};
 
 		unsigned char buffer[2048];
-		while ( unsigned int bufCount = std::fread( buffer, 1, sizeof( buffer ), file ) ) {
+		while ( auto bufCount = std::fread( buffer, 1, sizeof( buffer ), file ) ) {
 			sha256er.Update( buffer, bufCount );
 			crc32er.Update( buffer, bufCount );
 		}
@@ -188,7 +186,7 @@ static auto enterVPK( std::ofstream& writer, std::string_view vpkPath, std::stri
 					continue;
 			}
 
-			auto entryData = vpk->readEntry( entry );
+			auto entryData{ vpk->readEntry( entry ) };
 			if (! entryData ) {
 				Log_Error( "Failed to open file: `{}/{}`", vpkPath, entry.path );
 				continue;

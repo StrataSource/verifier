@@ -108,15 +108,15 @@ auto verify( std::string_view root_, std::string_view indexLocation ) -> int {
 		CryptoPP::CRC32 crc32er{};
 
 		unsigned char buffer[2048];
-		while ( unsigned int count = std::fread( buffer, 1, sizeof( buffer ), file ) ) {
+		while ( auto count = std::fread( buffer, 1, sizeof( buffer ), file ) ) {
 			sha256er.Update( buffer, count );
 			crc32er.Update( buffer, count );
 		}
 
 		std::array<CryptoPP::byte, CryptoPP::SHA256::DIGESTSIZE> sha256Hash{};
-		sha256er.Final(sha256Hash.data());
+		sha256er.Final( sha256Hash.data() );
 		std::array<CryptoPP::byte, CryptoPP::CRC32::DIGESTSIZE> crc32Hash{};
-		crc32er.Final(crc32Hash.data());
+		crc32er.Final( crc32Hash.data() );
 
 		std::string sha256HashStr;
 		std::string crc32HashStr;
@@ -160,14 +160,14 @@ static auto verifyArchivedFile( const std::string& archivePath, const std::strin
 
 	const auto fullPath{ archivePath + '/' + entryPath };
 
-	auto entry = loadedVPKs[ archivePath ]->findEntry( entryPath );
+	auto entry{ loadedVPKs[ archivePath ]->findEntry( entryPath ) };
 	if (! entry ) {
 		Log_Report( fullPath, "Entry doesn't exist on disk.", "nul", "nul" );
 		errors += 1;
 		return;
 	}
 
-	auto entryData = loadedVPKs[ archivePath ]->readEntry( *entry );
+	auto entryData{ loadedVPKs[ archivePath ]->readEntry( *entry ) };
 	if (! entryData ) {
 		Log_Error( "Failed to open file: `{}`", fullPath );
 		return;
@@ -185,7 +185,7 @@ static auto verifyArchivedFile( const std::string& archivePath, const std::strin
 	CryptoPP::SHA256 sha256er{};
 	sha256er.Update( reinterpret_cast<const CryptoPP::byte*>( entryData->data() ), entryData->size() );
 	std::array<CryptoPP::byte, CryptoPP::SHA256::DIGESTSIZE> sha256Hash{};
-	sha256er.Final(sha256Hash.data());
+	sha256er.Final( sha256Hash.data() );
 
 	std::string sha256HashStr;
 	std::string crc32HashStr;

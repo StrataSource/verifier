@@ -4,7 +4,7 @@
 
 bool g_bUIReportMode = false;
 
-void Log_Message( LogSeverity severity, std::string_view message ) {
+auto Log_Message( LogSeverity severity, std::string_view message ) -> void {
 	// Don't log in report only mode!
 	static constexpr std::string_view prefixes[] = {
 		"Info",
@@ -22,7 +22,7 @@ void Log_Message( LogSeverity severity, std::string_view message ) {
 	}
 }
 
-void Log_Report( std::string_view file, std::string_view message, std::string_view got, std::string_view expected ) {
+auto Log_Report( std::string_view file, std::string_view message, std::string_view got, std::string_view expected ) -> void {
 	if ( g_bUIReportMode ) {
 		std::printf( R"("report","%s","%s","%s","%s")" "\n", file.data(), message.data(), got.data(), expected.data() );
 	} else {
