@@ -20,7 +20,7 @@
 
 #include "log.hpp"
 
-static auto enterVPK( std::ofstream& writer, std::string_view vpkPath, std::string_view vpkPathRel, const std::vector<std::regex>& excludes, const std::vector<std::regex>& includes ) -> bool;
+static auto enterVPK( std::ofstream& writer, std::string_view vpkPath, std::string_view vpkPathRel, const std::vector<std::regex>& excludes, const std::vector<std::regex>& includes, unsigned int& count ) -> bool;
 static auto buildRegexCollection( const std::vector<std::string>& regexStrings, std::string_view collectionType ) -> std::vector<std::regex>;
 static auto matchPath( const std::string& path, const std::vector<std::regex>& regexes ) -> bool;
 
@@ -80,7 +80,7 @@ auto createFromRoot( std::string_view root_, std::string_view indexLocation, boo
 				continue;
 			}
 
-			if ( enterVPK( writer, path, pathRel, fileExclusionREs, fileInclusionREs ) ) {
+			if ( enterVPK( writer, path, pathRel, fileExclusionREs, fileInclusionREs, count ) ) {
 				Log_Info( "Processed VPK at `{}`", path );
 				continue;
 			}
@@ -149,7 +149,7 @@ auto createFromRoot( std::string_view root_, std::string_view indexLocation, boo
 	return 0;
 }
 
-static auto enterVPK( std::ofstream& writer, std::string_view vpkPath, std::string_view vpkPathRel, const std::vector<std::regex>& excludes, const std::vector<std::regex>& includes ) -> bool {
+static auto enterVPK( std::ofstream& writer, std::string_view vpkPath, std::string_view vpkPathRel, const std::vector<std::regex>& excludes, const std::vector<std::regex>& includes, unsigned int& count ) -> bool {
 	using namespace vpkpp;
 
 	auto vpk = VPK::open( std::string{ vpkPath } );
@@ -189,6 +189,7 @@ static auto enterVPK( std::ofstream& writer, std::string_view vpkPath, std::stri
 			// write out entry
 			writer << fmt::format( "{}\xFF{}\xFF{}\xFF{}\xFF{}\xFF\xFD", vpkPathRel, entry.path, entryData->size(), sha1HashStr, crc32HashStr );
 			Log_Info( "Processed file `{}/{}`", vpkPath, entry.path );
+			count += 1;
 		}
 	}
 
