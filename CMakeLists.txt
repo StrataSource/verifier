@@ -8,7 +8,7 @@ set( CMAKE_CXX_STANDARD 20 )
 set( CMAKE_CXX_STANDARD_REQUIRED ON )
 
 # Options
-option( VERIFIER_BUILD_GUI "Build the verifier GUI application" ON )
+option( VERIFIER_BUILD_GUI "Build the verifier GUI application" OFF )
 
 # RPath for Linux
 set( CMAKE_SKIP_BUILD_RPATH FALSE )
@@ -47,6 +47,6 @@ include( "${CMAKE_CURRENT_SOURCE_DIR}/src/thirdparty/CMakeLists.txt" )
 target_link_libraries( ${PROJECT_NAME} PRIVATE Argumentum::argumentum cryptopp::cryptopp fmt::fmt vpkpp)
 
 # Create GUI executable
-if( VERIFIER_BUILD_UI )
+if( VERIFIER_BUILD_GUI )
 	add_subdirectory( ui )
 endif()
