@@ -14,7 +14,8 @@
 #include <cryptopp/filters.h>
 #include <cryptopp/hex.h>
 #include <cryptopp/sha.h>
-#include <sourcepp/parser/Text.h>
+#include <kvpp/kvpp.h>
+#include <sourcepp/fs/FS.h>
 #include <sourcepp/string/String.h>
 #include <vpkpp/format/VPK.h>
 
@@ -23,6 +24,7 @@
 static auto enterVPK( std::ofstream& writer, std::string_view vpkPath, std::string_view vpkPathRel, const std::vector<std::regex>& excludes, const std::vector<std::regex>& includes, unsigned int& count ) -> bool;
 static auto buildRegexCollection( const std::vector<std::string>& regexStrings, std::string_view collectionType ) -> std::vector<std::regex>;
 static auto matchPath( const std::string& path, const std::vector<std::regex>& regexes ) -> bool;
+static auto globToRegex( std::string_view glob ) -> std::string;
 
 auto createFromRoot( std::string_view root_, std::string_view indexLocation, bool skipArchives,
 					 const std::vector<std::string>& fileExcludes, const std::vector<std::string>& fileIncludes,
@@ -40,10 +42,10 @@ auto createFromRoot( std::string_view root_, std::string_view indexLocation, boo
 		return 1;
 	}
 
-	std::vector<std::regex> archiveExclusionREs = buildRegexCollection(archiveExcludes, "archive exclusion");
-	std::vector<std::regex> archiveInclusionREs = buildRegexCollection(archiveIncludes, "archive inclusion");
-	std::vector<std::regex> fileExclusionREs = buildRegexCollection(fileExcludes, "file exclusion");
-	std::vector<std::regex> fileInclusionREs = buildRegexCollection(fileIncludes, "file inclusion");
+	std::vector<std::regex> archiveExclusionREs = buildRegexCollection( archiveExcludes, "archive exclusion" );
+	std::vector<std::regex> archiveInclusionREs = buildRegexCollection( archiveIncludes, "archive inclusion" );
+	std::vector<std::regex> fileExclusionREs = buildRegexCollection( fileExcludes, "file exclusion" );
+	std::vector<std::regex> fileInclusionREs = buildRegexCollection( fileIncludes, "file inclusion" );
 
 	// We always pass some regexes in from main.cpp, so not need for an ugly check if we actually
 	// compiled anything - fileExclusionREs will always be non-empty.
@@ -76,9 +78,10 @@ auto createFromRoot( std::string_view root_, std::string_view indexLocation, boo
 				continue;
 			}
 
-			if ( !archiveExclusionREs.empty() && !matchPath( pathRel, archiveInclusionREs ) ) {
+			if ( !archiveInclusionREs.empty() && !matchPath( pathRel, archiveInclusionREs ) ) {
 				continue;
 			}
+
 
 			if ( enterVPK( writer, path, pathRel, fileExclusionREs, fileInclusionREs, count ) ) {
 				Log_Info( "Processed VPK at `{}`", path );
@@ -87,11 +90,11 @@ auto createFromRoot( std::string_view root_, std::string_view indexLocation, boo
 
 			Log_Warn( "Unable to open VPK at `{}`. Treating as a regular file...", path );
 		} else {
-			if ( !fileInclusionREs.empty() && matchPath( pathRel, fileExclusionREs ) ) {
+			if ( !fileExclusionREs.empty() && matchPath( pathRel, fileExclusionREs ) ) {
 				continue;
 			}
 
-			if ( !fileExclusionREs.empty() && !matchPath( pathRel, fileInclusionREs ) ) {
+			if ( !fileInclusionREs.empty() && !matchPath( pathRel, fileInclusionREs ) ) {
 				continue;
 			}
 		}
@@ -118,7 +121,7 @@ auto createFromRoot( std::string_view root_, std::string_view indexLocation, boo
 		CryptoPP::SHA1 sha1er{};
 		CryptoPP::CRC32 crc32er{};
 
-		unsigned char buffer[2048];
+		unsigned char buffer[ 2048 ];
 		while ( auto bufCount = std::fread( buffer, 1, sizeof( buffer ), file ) ) {
 			sha1er.Update( buffer, bufCount );
 			crc32er.Update( buffer, bufCount );
@@ -146,6 +149,111 @@ auto createFromRoot( std::string_view root_, std::string_view indexLocation, boo
 	auto end{ std::chrono::high_resolution_clock::now() };
 	Log_Info( "Finished processing {} files in {}! (with {} errors)", count, std::chrono::duration_cast<std::chrono::seconds>( end - start ), errors );
 
+	return 0;
+}
+
+auto createFromSteamDepotConfigs( const std::string& configPath, const std::vector<std::string>& depotIDs, std::string_view indexLocation,
+								  bool skipArchives, const std::vector<std::string>& fileExcludes, const std::vector<std::string>& fileIncludes,
+								  const std::vector<std::string>& archiveExcludes, const std::vector<std::string>& archiveIncludes ) -> int {
+	using namespace kvpp;
+
+	/*
+	 * We don't support the full depot config spec (most of it though!)
+	 *
+	 * Assumptions are as follows:
+	 *  - ContentRoot (wherever it appears) is relative
+	 *  - DepotBuildConfig/FileMapping/LocalPath is relative
+	 *  - DepotBuildConfig/FileMapping/LocalPath contains files directly under DepotBuildConfig/FileMapping/DepotPath
+	 *    (for example, LocalPath is ".\p2ce\x.txt" and DepotPath is ".\p2ce\")
+	 *  - DepotBuildConfig/FileMapping/Recursive is true when LocalPath is a directory
+	 */
+	Log_Warn( "The Steam depot config parser is incomplete and fine-tuned to work with Portal 2: Community Edition. Use at your own risk." );
+
+	auto start{ std::chrono::high_resolution_clock::now() };
+	unsigned int configs = 0;
+
+	if (! std::filesystem::exists( configPath ) ) {
+		Log_Error( "Depot config at `{}` does not exist!", configPath );
+		return 1;
+	}
+
+	KV1 configKeyvalues{ sourcepp::fs::readFileText( configPath ) };
+	if ( configKeyvalues.hasChild( "DepotBuildConfig" ) ) {
+		Log_Error( R"(Depot config at `{}` has root key "DepotBuildConfig". Use the config with the root key "AppBuild" instead.)", configPath );
+		return 1;
+	}
+
+	const auto& appBuildConfig = configKeyvalues[ "AppBuild" ];
+	if ( appBuildConfig.isInvalid() ) {
+		Log_Error( "Depot config at `{}` is invalid!", configPath );
+		return 1;
+	}
+
+	auto contentRoot{ std::filesystem::path{ configPath }.parent_path() / appBuildConfig[ "ContentRoot" ].getValue() };
+	const auto& depots = appBuildConfig[ "Depots" ];
+	for ( const auto& depot : depots.getChildren() ) {
+		if ( std::find( depotIDs.begin(), depotIDs.end(), depot.getKey() ) == depotIDs.end() ) {
+			continue;
+		}
+
+		const auto createFromSteamDepotConfig{ [ &configPath, &indexLocation, skipArchives, &fileExcludes, &contentRoot, &fileIncludes, &archiveExcludes, &archiveIncludes ]( const KV1Element& depotBuildConfig ) {
+			std::vector<std::string> exclusionRegexes;
+			exclusionRegexes.insert( exclusionRegexes.end(), fileExcludes.begin(), fileExcludes.end() );
+			for ( int i = 0; i < depotBuildConfig.getChildCount( "FileExclusion" ); i++ ) {
+				std::string exclusion{ depotBuildConfig( "FileExclusion", i ).getValue() };
+				sourcepp::string::normalizeSlashes( exclusion );
+				if ( exclusion.starts_with( "./" ) )
+					exclusion = exclusion.substr(2);
+
+				exclusionRegexes.emplace_back( globToRegex( exclusion ) );
+			}
+
+			std::vector<std::string> inclusionRegexes{ fileIncludes };
+			for ( int i = 0; i < depotBuildConfig.getChildCount( "FileMapping" ); i++ ) {
+				std::string inclusion{ depotBuildConfig( "FileMapping", i )[ "LocalPath" ].getValue() };
+				sourcepp::string::normalizeSlashes( inclusion );
+				if ( inclusion.starts_with( "./" ) )
+					inclusion = inclusion.substr(2);
+
+				inclusionRegexes.emplace_back( globToRegex( inclusion ) );
+			}
+
+			createFromRoot(
+				depotBuildConfig.hasChild( "ContentRoot" ) ? ( std::filesystem::path{ configPath }.parent_path() / depotBuildConfig[ "ContentRoot" ].getValue() ).string() : contentRoot.string(),
+				indexLocation,
+				skipArchives,
+				exclusionRegexes,
+				inclusionRegexes,
+				archiveExcludes,
+				archiveIncludes
+			);
+		} };
+
+		if ( depot.getChildCount() > 0 ) {
+			createFromSteamDepotConfig( depot );
+		} else {
+			auto depotPath{ ( std::filesystem::path{ configPath }.parent_path() / depot.getValue() ).string() };
+			if ( !std::filesystem::exists( depotPath ) ) {
+				Log_Error( "Failed to load depot with ID `{}`: could not find depot config file at `{}`!", depot.getKey(), depotPath );
+				continue;
+			}
+
+			KV1 depotBuildConfigKeyvalues{ sourcepp::fs::readFileText( depotPath ) };
+
+			const auto& depotBuildConfig = depotBuildConfigKeyvalues[ "DepotBuildConfig" ];
+			if ( depotBuildConfig.isInvalid() ) {
+				Log_Error( "Depot config with ID `{}` at `{}` is invalid!", depot.getKey(), depotPath );
+				continue;
+			}
+
+			createFromSteamDepotConfig( depotBuildConfig );
+		}
+
+		Log_Info( "Finished processing depot with ID `{}`.", depot.getKey() );
+		configs++;
+	}
+
+	Log_Info( "Finished processing {} depot configs in {}.", configs, std::chrono::duration_cast<std::chrono::seconds>( std::chrono::high_resolution_clock::now() - start ) );
 	return 0;
 }
 
@@ -197,7 +305,7 @@ static auto enterVPK( std::ofstream& writer, std::string_view vpkPath, std::stri
 }
 
 static auto buildRegexCollection( const std::vector<std::string>& regexStrings, std::string_view collectionType ) -> std::vector<std::regex> {
-	std::vector<std::regex> collection {};
+	std::vector<std::regex> collection{};
 
 	if ( !regexStrings.empty() ) {
 		Log_Info( "Compiling {} regexes...", collectionType );
@@ -215,4 +323,24 @@ static auto matchPath( const std::string& path, const std::vector<std::regex>& r
 	return std::any_of( regexes.begin(), regexes.end(), [&]( const auto& item ) {
 		return std::regex_match( path, item );
 	});
+}
+
+static auto globToRegex( std::string_view glob ) -> std::string {
+	static constexpr std::string_view SPECIAL_CHARS{ R"(.+^$()[]{}|-+:'"<>\#&!)" };
+
+	std::string out;
+	for ( char c : glob ) {
+		if ( SPECIAL_CHARS.find( c ) != std::string_view::npos ) {
+			out += '\\';
+			out += c;
+		} else if ( c == '?' ) {
+			out += '.';
+		} else if ( c == '*' ) {
+			out += ".*?";
+		} else {
+			out += c;
+		}
+	}
+
+	return out;
 }
