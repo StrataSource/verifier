@@ -32,7 +32,7 @@ auto verify( std::string_view root_, std::string_view indexLocation ) -> int {
 	Log_Info( "Using index file at `{}`", indexPath.string() );
 
 	// open index file, if the file didn't exist, we wouldn't be here
-	std::ifstream indexStream{ indexPath, std::ios_base::in };
+	std::ifstream indexStream{ indexPath, std::ios::in };
 	if (! indexStream.good() ) {
 		Log_Error( "Failed to open index file for reading: N/D" );
 		return 1;

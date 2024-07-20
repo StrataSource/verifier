@@ -22,38 +22,23 @@
 
 using sourcepp::parser::text::isNumber;
 
-static auto enterVPK( std::ofstream& writer, std::string_view vpkPath, std::string_view vpkPathRel, const std::vector<std::regex>& exclusions ) -> bool;
+static auto enterVPK( std::ofstream& writer, std::string_view vpkPath, std::string_view vpkPathRel, const std::vector<std::regex>& excluded, const std::vector<std::regex>& included ) -> bool;
 
-auto create( std::string_view root_, std::string_view indexLocation, bool skipArchives, const std::vector<std::string>& excluded, bool overwrite ) -> int {
+auto createFromRoot( std::string_view root_, std::string_view indexLocation, bool skipArchives, const std::vector<std::string>& excluded, const std::vector<std::string>& included ) -> int {
 	const std::filesystem::path root{ root_ };
 	const std::filesystem::path indexPath{ root / indexLocation };
-
-	if ( std::filesystem::exists( indexPath ) ) {
-		if (! overwrite ) {
-			Log_Error( "Index file `{}` already exists, do you want to overwrite it? (y/N)", indexPath.string() );
-			std::string input;
-			std::cin >> input;
-			if ( input != "y" && input != "Y" ) {
-				Log_Info( "Aborting." );
-				return 1;
-			}
-		} else {
-			Log_Warn( "Index file `{}` already exists, will be overwritten.", indexPath.string() );
-		}
-	}
 
 	auto start{ std::chrono::high_resolution_clock::now() };
 	Log_Info( "Creating index file at `{}`", indexPath.string() );
 
 	// open index file with a writer stream
-	std::ofstream writer{ indexPath, std::ios_base::out | std::ios_base::trunc };
+	std::ofstream writer{ indexPath, std::ios::out | std::ios::app };
 	if (! writer.good() ) {
 		Log_Error( "Failed to open index file for writing: N/D" );
 		return 1;
 	}
 
 	Log_Info( "Compiling exclusion regexes..." );
-	// allocate all at once
 	std::vector<std::regex> exclusionREs{};
 	exclusionREs.reserve( excluded.size() );
 	for ( const auto& exclusion : excluded ) {
@@ -62,6 +47,16 @@ auto create( std::string_view root_, std::string_view indexLocation, bool skipAr
 	if (! skipArchives ) {
 		exclusionREs.emplace_back( R"(.*_[0-9][0-9][0-9]\.vpk)", std::regex::ECMAScript | std::regex::icase | std::regex::optimize );
 	}
+
+	Log_Info( "Compiling inclusion regexes..." );
+	std::vector<std::regex> inclusionREs{};
+	if (! included.empty() ) {
+		inclusionREs.reserve( included.size() );
+		for ( const auto& inclusion: included ) {
+			inclusionREs.emplace_back( inclusion, std::regex::ECMAScript | std::regex::icase | std::regex::optimize );
+		}
+	}
+
 	Log_Info( "Done in {}", std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::high_resolution_clock::now() - start ) );
 
 	unsigned count{ 0 };
@@ -89,9 +84,20 @@ auto create( std::string_view root_, std::string_view indexLocation, bool skipAr
 		if ( breaker )
 			continue;
 
+		if (! inclusionREs.empty() ) {
+			for ( const auto& inclusion: inclusionREs ) {
+				if ( std::regex_match( pathRel, inclusion ) ) {
+					breaker = true;
+					break;
+				}
+			}
+			if (! breaker )
+				continue;
+		}
+
 		if ( !skipArchives && path.ends_with( ".vpk" ) ) {
 			// We've already ignored numbered archives in the exclusion regexes
-			if ( enterVPK( writer, path, pathRel, exclusionREs ) ) {
+			if ( enterVPK( writer, path, pathRel, exclusionREs, inclusionREs ) ) {
 				Log_Info( "Processed VPK at `{}`", path );
 				continue;
 			}
@@ -151,7 +157,7 @@ auto create( std::string_view root_, std::string_view indexLocation, bool skipAr
 	return 0;
 }
 
-static auto enterVPK( std::ofstream& writer, std::string_view vpkPath, std::string_view vpkPathRel, const std::vector<std::regex>& exclusions ) -> bool {
+static auto enterVPK( std::ofstream& writer, std::string_view vpkPath, std::string_view vpkPathRel, const std::vector<std::regex>& excluded, const std::vector<std::regex>& included ) -> bool {
 	using namespace vpkpp;
 
 	auto vpk = VPK::open( std::string{ vpkPath } );
@@ -162,7 +168,7 @@ static auto enterVPK( std::ofstream& writer, std::string_view vpkPath, std::stri
 	for ( const auto& [ entryDirectory, entries ] : vpk->getBakedEntries() ) {
 		for ( const auto& entry : entries ) {
 			auto breaker{ false };
-			for ( const auto& exclusion : exclusions ) {
+			for ( const auto& exclusion : excluded ) {
 				if ( std::regex_match( entry.path, exclusion ) ) {
 					breaker = true;
 					break;
@@ -170,6 +176,17 @@ static auto enterVPK( std::ofstream& writer, std::string_view vpkPath, std::stri
 			}
 			if ( breaker )
 				continue;
+
+			if (! included.empty() ) {
+				for ( const auto& inclusion: included ) {
+					if ( std::regex_match( entry.path, inclusion ) ) {
+						breaker = true;
+						break;
+					}
+				}
+				if (! breaker )
+					continue;
+			}
 
 			auto entryData = vpk->readEntry( entry );
 			if (! entryData ) {
