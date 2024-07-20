@@ -6,4 +6,4 @@
 #include <string_view>
 #include <vector>
 
-auto create( std::string_view root, std::string_view indexLocation, const std::vector<std::string>& excluded, bool overwrite ) noexcept -> int;
+auto create( std::string_view root, std::string_view indexLocation, bool parseArchives, const std::vector<std::string>& excluded, bool overwrite ) -> int;

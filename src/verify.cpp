@@ -12,8 +12,11 @@
 #include <cryptopp/hex.h>
 #include <cryptopp/sha.h>
 #include <sourcepp/crypto/String.h>
+#include <vpkpp/format/VPK.h>
 
 #include "log.hpp"
+
+static auto verifyArchivedFile( const std::string& archivePath, const std::string& entryPath, std::uint64_t expectedSize, std::string_view expectedSha256, std::string_view expectedCrc32, unsigned int& entries, unsigned int& errors ) -> void;
 
 static auto splitString( const std::string& string, const std::string& delim ) -> std::vector<std::string>;
 
@@ -53,17 +56,24 @@ auto verify( std::string_view root_, std::string_view indexLocation ) -> int {
 
 		const auto split{ splitString( line.str(), "\xFF" ) };
 		// deserialize row
-		const auto& pathRel{ split[ 0 ] };
-		const auto expectedSize{ std::stoull( split[ 1 ] ) };
-		const auto& expectedSha256{ split[ 2 ] };
-		const auto& expectedCrc32{ split[ 3 ] };
+		const auto& archive{ split[ 0 ] };
+		const auto& pathRel{ split[ 1 ] };
+		const auto expectedSize{ std::stoull( split[ 2 ] ) };
+		const auto& expectedSha256{ split[ 3 ] };
+		const auto& expectedCrc32{ split[ 4 ] };
 
 		// verify it
-		const auto path = root / pathRel;
+		const bool insideArchive{ archive != "." };
+		std::filesystem::path path{ insideArchive ? root / archive : root / pathRel };
 
 		if (! std::filesystem::exists( path ) ) {
 			Log_Report( pathRel, "Entry doesn't exist on disk.", "nul", "nul" );
 			errors += 1;
+			continue;
+		}
+
+		if ( insideArchive ) {
+			verifyArchivedFile( path.string(), pathRel, expectedSize, expectedSha256, expectedCrc32, entries, errors );
 			continue;
 		}
 
@@ -77,7 +87,7 @@ auto verify( std::string_view root_, std::string_view indexLocation ) -> int {
 		fopen_s( &file, path.string().c_str(), "rb" );
 #endif
 		if (! file ) {
-			Log_Error( "Failed to open file: {}", path.string() );
+			Log_Error( "Failed to open file: `{}`", path.string() );
 			continue;
 		}
 
@@ -85,7 +95,7 @@ auto verify( std::string_view root_, std::string_view indexLocation ) -> int {
 
 		auto length{ std::ftell( file ) };
 		if ( length != expectedSize ) {
-			Log_Report( pathRel, "Sizes don't match.", std::to_string( length ), split[ 3 ] );
+			Log_Report( pathRel, "Sizes don't match.", std::to_string( length ), std::to_string( expectedSize ) );
 			Log_Info( "Processed entry `{}`", pathRel );
 			entries += 1;
 			errors += 1;
@@ -125,7 +135,7 @@ auto verify( std::string_view root_, std::string_view indexLocation ) -> int {
 			errors += 1;
 		}
 
-		Log_Info( "Processed entry `{}`", pathRel );
+		Log_Info( "Processed file `{}`", pathRel );
 		entries += 1;
 	}
 	std::fclose( file );
@@ -134,6 +144,68 @@ auto verify( std::string_view root_, std::string_view indexLocation ) -> int {
 	Log_Info( "Verified {} files in {} with {} errors!", entries, std::chrono::duration_cast<std::chrono::seconds>( end - start ), errors );
 
 	return 0;
+}
+
+static auto verifyArchivedFile( const std::string& archivePath, const std::string& entryPath, std::uint64_t expectedSize, std::string_view expectedSha256, std::string_view expectedCrc32, unsigned int& entries, unsigned int& errors ) -> void {
+	using namespace vpkpp;
+
+	static std::unordered_map<std::string, std::unique_ptr<PackFile>> loadedVPKs{};
+	if (! loadedVPKs.contains( archivePath ) ) {
+		loadedVPKs[ archivePath ] = VPK::open( archivePath );
+	}
+	if (! loadedVPKs[ archivePath ]) {
+		Log_Error( "Failed to open VPK at `{}` (containing file at `{}`)", archivePath, entryPath );
+		return;
+	}
+
+	const auto fullPath{ archivePath + static_cast<char>( std::filesystem::path::preferred_separator ) + entryPath };
+
+	auto entry = loadedVPKs[ archivePath ]->findEntry( entryPath );
+	if (! entry ) {
+		Log_Report( fullPath, "Entry doesn't exist on disk.", "nul", "nul" );
+		errors += 1;
+		return;
+	}
+
+	auto entryData = loadedVPKs[ archivePath ]->readEntry( *entry );
+	if (! entryData ) {
+		Log_Error( "Failed to open file: `{}`", fullPath );
+		return;
+	}
+
+	if ( entryData->size() != expectedSize ) {
+		Log_Report( fullPath, "Sizes don't match.", std::to_string( entryData->size() ), std::to_string( expectedSize ) );
+		Log_Info( "Processed entry `{}`", fullPath );
+		entries += 1;
+		errors += 1;
+		return;
+	}
+
+	// sha256 (crc32 is already computed)
+	CryptoPP::SHA256 sha256er{};
+	sha256er.Update( reinterpret_cast<const CryptoPP::byte*>( entryData->data() ), entryData->size() );
+	std::array<CryptoPP::byte, CryptoPP::SHA256::DIGESTSIZE> sha256Hash{};
+	sha256er.Final(sha256Hash.data());
+
+	std::string sha256HashStr;
+	std::string crc32HashStr;
+	{
+		CryptoPP::StringSource sha256HashStrSink{ sha256Hash.data(), sha256Hash.size(), true, new CryptoPP::HexEncoder{ new CryptoPP::StringSink{ sha256HashStr } } };
+		CryptoPP::StringSource crc32HashStrSink{ reinterpret_cast<const CryptoPP::byte*>( &entry->crc32 ), sizeof( entry->crc32 ), true, new CryptoPP::HexEncoder{ new CryptoPP::StringSink{ crc32HashStr } } };
+	}
+
+	if ( sha256HashStr != expectedSha256 ) {
+		Log_Report( fullPath, "Content sha256 doesn't match.", sha256HashStr, expectedSha256 );
+		errors += 1;
+	}
+
+	if ( crc32HashStr != expectedCrc32 ) {
+		Log_Report( fullPath, "Content crc32 doesn't match.", crc32HashStr, expectedCrc32 );
+		errors += 1;
+	}
+
+	Log_Info( "Processed file `{}`", fullPath );
+	entries += 1;
 }
 
 static auto splitString( const std::string& string, const std::string& delim ) -> std::vector<std::string> {
