@@ -11,28 +11,27 @@ enum class LogSeverity
 };
 
 // Base logging function
-void Log_Message( LogSeverity severity, const std::string_view message );
+auto Log_Message( LogSeverity severity, std::string_view message ) -> void;
 
 // Report
 extern bool g_bUIReportMode;
-void Log_Report( const std::string_view file, const std::string_view message, const std::string_view got, const std::string_view expected );
+auto Log_Report( std::string_view file, std::string_view message, std::string_view got, std::string_view expected ) -> void;
 
 // Logging helpers
 template <typename... Ts>
-inline void Log_Info( const fmt::format_string<Ts...> fmt, Ts&&... args )
+inline auto Log_Info( const fmt::format_string<Ts...> fmt, Ts&&... args ) -> void
 {
 	Log_Message( LogSeverity::Info, fmt::format( fmt, std::forward<Ts>( args )... ) );
 }
 
 template <typename... Ts>
-inline void Log_Warn( const fmt::format_string<Ts...> fmt, Ts&&... args )
+inline auto Log_Warn( const fmt::format_string<Ts...> fmt, Ts&&... args ) -> void
 {
 	Log_Message( LogSeverity::Warn, fmt::format( fmt, std::forward<Ts>( args )... ) );
 }
 
 template <typename... Ts>
-inline void Log_Error( const fmt::format_string<Ts...> fmt, Ts&&... args )
+inline auto Log_Error( const fmt::format_string<Ts...> fmt, Ts&&... args ) -> void
 {
 	Log_Message( LogSeverity::Error, fmt::format( fmt, std::forward<Ts>(args)... ) );
 }
-
