@@ -6,13 +6,12 @@
 #include <QApplication>
 #include <iostream>
 
-
 int main( int argc, char* argv[] ) {
 	QApplication app{ argc, argv };
 	QApplication::setApplicationName( "verifier-ui" );
 	QApplication::setApplicationDisplayName( "Verifier" );
-	QApplication::setOrganizationName( "Strata" );
-	QApplication::setApplicationVersion( "0.1.0" );
+	QApplication::setOrganizationName( "Strata Source" );
+	QApplication::setApplicationVersion( VERIFIER_VERSION );
 
 	auto window = new MainWindow();
 	window->show();
