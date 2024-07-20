@@ -158,7 +158,7 @@ static auto verifyArchivedFile( const std::string& archivePath, const std::strin
 		return;
 	}
 
-	const auto fullPath{ archivePath + static_cast<char>( std::filesystem::path::preferred_separator ) + entryPath };
+	const auto fullPath{ archivePath + '/' + entryPath };
 
 	auto entry = loadedVPKs[ archivePath ]->findEntry( entryPath );
 	if (! entry ) {
