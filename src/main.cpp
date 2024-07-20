@@ -38,6 +38,7 @@ auto main( int argc, char* argv[] ) -> int {
 
 	bool newIndex{ false };
 	std::string root{};
+	bool parseArchives{ false };
 	std::vector<std::string> excludes{};
 	std::string indexLocation{};
 	bool overwrite{ false };
@@ -58,6 +59,10 @@ auto main( int argc, char* argv[] ) -> int {
 		.metavar( "root" )
 		.maxargs( 1 )
 		.absent( defaultRoot );
+	params.add_parameter( parseArchives, "--parse-archives" )
+		.help( "Parse files stored in VPKs." )
+		.metavar( "parse-archives" )
+		.absent( false );
 	params.add_parameter( excludes, "--exclude", "-e" )
 		.help( "RegExp pattern(s) to exclude files when creating the index." )
 		.metavar( "excluded" )
@@ -99,7 +104,7 @@ auto main( int argc, char* argv[] ) -> int {
 		excludes.emplace_back( ".*\\.vmx" );
 		excludes.emplace_back( ".*\\.log" );
 		excludes.emplace_back( ".*verifier_index\\.rsv" );
-		ret = create( root, indexLocation, excludes, overwrite );
+		ret = create( root, indexLocation, parseArchives, excludes, overwrite );
 	} else {
 		if ( overwrite )
 			Log_Error( "current action doesn't support `--overwrite`, please remove it." );

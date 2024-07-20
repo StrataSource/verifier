@@ -14,16 +14,22 @@
 #include <cryptopp/filters.h>
 #include <cryptopp/hex.h>
 #include <cryptopp/sha.h>
+#include <sourcepp/parser/Text.h>
+#include <vpkpp/format/VPK.h>
 
 #include "log.hpp"
 
-auto create( std::string_view root_, std::string_view indexLocation, const std::vector<std::string>& excluded, bool overwrite ) noexcept -> int {
+using sourcepp::parser::text::isNumber;
+
+static auto enterVPK( std::ofstream& writer, std::string_view vpkPath, std::string_view vpkPathRel, const std::vector<std::regex>& exclusions ) -> bool;
+
+auto create( std::string_view root_, std::string_view indexLocation, bool parseArchives, const std::vector<std::string>& excluded, bool overwrite ) -> int {
 	const std::filesystem::path root{ root_ };
 	const std::filesystem::path indexPath{ root / indexLocation };
 
 	if ( std::filesystem::exists( indexPath ) ) {
 		if (! overwrite ) {
-			Log_Error( "Index file `{}` already exist, do you want to overwite it? (y/N)", indexPath.string() );
+			Log_Error( "Index file `{}` already exists, do you want to overwrite it? (y/N)", indexPath.string() );
 			std::string input;
 			std::cin >> input;
 			if ( input != "y" && input != "Y" ) {
@@ -31,7 +37,7 @@ auto create( std::string_view root_, std::string_view indexLocation, const std::
 				return 1;
 			}
 		} else {
-			Log_Warn( "Index file `{}` already exist, will be overwritten.", indexPath.string() );
+			Log_Warn( "Index file `{}` already exists, will be overwritten.", indexPath.string() );
 		}
 	}
 
@@ -51,6 +57,9 @@ auto create( std::string_view root_, std::string_view indexLocation, const std::
 	exclusionREs.reserve( excluded.size() );
 	for ( const auto& exclusion : excluded ) {
 		exclusionREs.emplace_back( exclusion, std::regex::ECMAScript | std::regex::icase | std::regex::optimize );
+	}
+	if ( parseArchives ) {
+		exclusionREs.emplace_back( R"(.*_[0-9][0-9][0-9]\.vpk)", std::regex::ECMAScript | std::regex::icase | std::regex::optimize );
 	}
 	Log_Info( "Done in {}", std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::high_resolution_clock::now() - start ) );
 
@@ -77,6 +86,15 @@ auto create( std::string_view root_, std::string_view indexLocation, const std::
 		}
 		if ( breaker )
 			continue;
+
+		if ( parseArchives && path.ends_with( ".vpk" ) ) {
+			// We've already ignored numbered archives in the exclusion regexes
+			if ( enterVPK( writer, path, pathRel, exclusionREs ) ) {
+				Log_Info( "Processed VPK at `{}`", path );
+				continue;
+			}
+			Log_Warn( "Unable to open VPK at `{}`. Treating as a regular file...", path );
+		}
 
 		// open file
 #ifndef _WIN32
@@ -108,9 +126,9 @@ auto create( std::string_view root_, std::string_view indexLocation, const std::
 		std::fclose( file );
 
 		std::array<CryptoPP::byte, CryptoPP::SHA256::DIGESTSIZE> sha256Hash{};
-		sha256er.Final(sha256Hash.data());
+		sha256er.Final( sha256Hash.data() );
 		std::array<CryptoPP::byte, CryptoPP::CRC32::DIGESTSIZE> crc32Hash{};
-		crc32er.Final(crc32Hash.data());
+		crc32er.Final( crc32Hash.data() );
 
 		std::string sha256HashStr;
 		std::string crc32HashStr;
@@ -120,7 +138,7 @@ auto create( std::string_view root_, std::string_view indexLocation, const std::
 		}
 
 		// write out entry
-		writer << fmt::format( "{}\xFF{}\xFF{}\xFF{}\xFF\xFD", pathRel, size, sha256HashStr, crc32HashStr );
+		writer << fmt::format( ".\xFF{}\xFF{}\xFF{}\xFF{}\xFF\xFD", pathRel, size, sha256HashStr, crc32HashStr );
 		Log_Info( "Processed file `{}`", path );
 		count += 1;
 	}
@@ -129,4 +147,52 @@ auto create( std::string_view root_, std::string_view indexLocation, const std::
 	Log_Info( "Finished processing {} files in {}! (with {} errors)", count, std::chrono::duration_cast<std::chrono::seconds>( end - start ), errors );
 
 	return 0;
+}
+
+static auto enterVPK( std::ofstream& writer, std::string_view vpkPath, std::string_view vpkPathRel, const std::vector<std::regex>& exclusions ) -> bool {
+	using namespace vpkpp;
+
+	auto vpk = VPK::open( std::string{ vpkPath } );
+	if (! vpk ) {
+		return false;
+	}
+
+	for ( const auto& [ entryDirectory, entries ] : vpk->getBakedEntries() ) {
+		for ( const auto& entry : entries ) {
+			auto breaker{ false };
+			for ( const auto& exclusion : exclusions ) {
+				if ( std::regex_match( entry.path, exclusion ) ) {
+					breaker = true;
+					break;
+				}
+			}
+			if ( breaker )
+				continue;
+
+			auto entryData = vpk->readEntry( entry );
+			if (! entryData ) {
+				Log_Error( "Failed to open file: `{}{}{}`", vpkPath, static_cast<char>( std::filesystem::path::preferred_separator ), entry.path );
+				continue;
+			}
+
+			// sha256 (crc32 is already computed)
+			CryptoPP::SHA256 sha256er{};
+			sha256er.Update( reinterpret_cast<const CryptoPP::byte*>( entryData->data() ), entryData->size() );
+			std::array<CryptoPP::byte, CryptoPP::SHA256::DIGESTSIZE> sha256Hash{};
+			sha256er.Final( sha256Hash.data() );
+
+			std::string sha256HashStr;
+			std::string crc32HashStr;
+			{
+				CryptoPP::StringSource sha256HashStrSink{ sha256Hash.data(), sha256Hash.size(), true, new CryptoPP::HexEncoder{ new CryptoPP::StringSink{ sha256HashStr } } };
+				CryptoPP::StringSource crc32HashStrSink{ reinterpret_cast<const CryptoPP::byte*>( &entry.crc32 ), sizeof( entry.crc32 ), true, new CryptoPP::HexEncoder{ new CryptoPP::StringSink{ crc32HashStr } } };
+			}
+
+			// write out entry
+			writer << fmt::format( "{}\xFF{}\xFF{}\xFF{}\xFF{}\xFF\xFD", vpkPathRel, entry.path, entryData->size(), sha256HashStr, crc32HashStr );
+			Log_Info( "Processed file `{}{}{}`", vpkPath, static_cast<char>( std::filesystem::path::preferred_separator ), entry.path );
+		}
+	}
+
+	return true;
 }

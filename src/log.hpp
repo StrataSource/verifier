@@ -19,19 +19,16 @@ auto Log_Report( std::string_view file, std::string_view message, std::string_vi
 
 // Logging helpers
 template <typename... Ts>
-inline auto Log_Info( const fmt::format_string<Ts...> fmt, Ts&&... args ) -> void
-{
+inline auto Log_Info( const fmt::format_string<Ts...> fmt, Ts&&... args ) -> void {
 	Log_Message( LogSeverity::Info, fmt::format( fmt, std::forward<Ts>( args )... ) );
 }
 
 template <typename... Ts>
-inline auto Log_Warn( const fmt::format_string<Ts...> fmt, Ts&&... args ) -> void
-{
+inline auto Log_Warn( const fmt::format_string<Ts...> fmt, Ts&&... args ) -> void {
 	Log_Message( LogSeverity::Warn, fmt::format( fmt, std::forward<Ts>( args )... ) );
 }
 
 template <typename... Ts>
-inline auto Log_Error( const fmt::format_string<Ts...> fmt, Ts&&... args ) -> void
-{
+inline auto Log_Error( const fmt::format_string<Ts...> fmt, Ts&&... args ) -> void {
 	Log_Message( LogSeverity::Error, fmt::format( fmt, std::forward<Ts>(args)... ) );
 }
