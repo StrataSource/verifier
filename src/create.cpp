@@ -70,7 +70,8 @@ auto createFromRoot( std::string_view root_, std::string_view indexLocation, boo
 		}
 
 		// relative path
-		const auto pathRel{ std::filesystem::relative( path, root ).string() };
+		auto pathRel{ std::filesystem::relative( path, root ).string() };
+		sourcepp::string::normalizeSlashes( pathRel );
 
 		auto breaker{ false };
 		for ( const auto& exclusion : exclusionREs ) {
