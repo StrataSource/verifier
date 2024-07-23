@@ -20,9 +20,13 @@
 
 #include "log.hpp"
 
-static auto enterVPK( std::ofstream& writer, std::string_view vpkPath, std::string_view vpkPathRel, const std::vector<std::regex>& excluded, const std::vector<std::regex>& included ) -> bool;
+static auto enterVPK( std::ofstream& writer, std::string_view vpkPath, std::string_view vpkPathRel, const std::vector<std::regex>& excludes, const std::vector<std::regex>& includes ) -> bool;
+static auto buildRegexCollection( const std::vector<std::string>& regexStrings, std::string_view collectionType ) -> std::vector<std::regex>;
+static auto matchPath( const std::string& path, const std::vector<std::regex>& regexes ) -> bool;
 
-auto createFromRoot( std::string_view root_, std::string_view indexLocation, bool skipArchives, const std::vector<std::string>& excluded, const std::vector<std::string>& included ) -> int {
+auto createFromRoot( std::string_view root_, std::string_view indexLocation, bool skipArchives,
+					 const std::vector<std::string>& fileExcludes, const std::vector<std::string>& fileIncludes,
+					 const std::vector<std::string>& archiveExcludes, const std::vector<std::string>& archiveIncludes ) -> int {
 	const std::filesystem::path root{ root_ };
 	const std::filesystem::path indexPath{ root / indexLocation };
 
@@ -36,25 +40,13 @@ auto createFromRoot( std::string_view root_, std::string_view indexLocation, boo
 		return 1;
 	}
 
-	Log_Info( "Compiling exclusion regexes..." );
-	std::vector<std::regex> exclusionREs;
-	exclusionREs.reserve( excluded.size() );
-	for ( const auto& exclusion : excluded ) {
-		exclusionREs.emplace_back( exclusion, std::regex::ECMAScript | std::regex::icase | std::regex::optimize );
-	}
-	if (! skipArchives ) {
-		exclusionREs.emplace_back( R"(.*_[0-9][0-9][0-9]\.vpk)", std::regex::ECMAScript | std::regex::icase | std::regex::optimize );
-	}
+	std::vector<std::regex> archiveExclusionREs = buildRegexCollection(archiveExcludes, "archive exclusion");
+	std::vector<std::regex> archiveInclusionREs = buildRegexCollection(archiveIncludes, "archive inclusion");
+	std::vector<std::regex> fileExclusionREs = buildRegexCollection(fileExcludes, "file exclusion");
+	std::vector<std::regex> fileInclusionREs = buildRegexCollection(fileIncludes, "file inclusion");
 
-	Log_Info( "Compiling inclusion regexes..." );
-	std::vector<std::regex> inclusionREs;
-	if (! included.empty() ) {
-		inclusionREs.reserve( included.size() );
-		for ( const auto& inclusion: included ) {
-			inclusionREs.emplace_back( inclusion, std::regex::ECMAScript | std::regex::icase | std::regex::optimize );
-		}
-	}
-
+	// We always pass some regexes in from main.cpp, so not need for an ugly check if we actually
+	// compiled anything - fileExclusionREs will always be non-empty.
 	Log_Info( "Done in {}", std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::high_resolution_clock::now() - start ) );
 
 	unsigned count{ 0 };
@@ -73,34 +65,35 @@ auto createFromRoot( std::string_view root_, std::string_view indexLocation, boo
 		auto pathRel{ std::filesystem::relative( path, root ).string() };
 		sourcepp::string::normalizeSlashes( pathRel );
 
-		auto breaker{ false };
-		for ( const auto& exclusion : exclusionREs ) {
-			if ( std::regex_match( pathRel, exclusion ) ) {
-				breaker = true;
-				break;
-			}
-		}
-		if ( breaker )
-			continue;
+		if ( path.ends_with( ".vpk" ) ) {
+			static const std::regex numberedVpkRegex { R"(.*_[0-9][0-9][0-9]\.vpk)", std::regex::ECMAScript | std::regex::icase | std::regex::optimize };
 
-		if (! inclusionREs.empty() ) {
-			for ( const auto& inclusion: inclusionREs ) {
-				if ( std::regex_match( pathRel, inclusion ) ) {
-					breaker = true;
-					break;
-				}
-			}
-			if (! breaker )
+			if ( skipArchives || std::regex_match( pathRel, numberedVpkRegex ) ) {
 				continue;
-		}
+			}
 
-		if ( !skipArchives && path.ends_with( ".vpk" ) ) {
-			// We've already ignored numbered archives in the exclusion regexes
-			if ( enterVPK( writer, path, pathRel, exclusionREs, inclusionREs ) ) {
+			if ( !archiveExclusionREs.empty() && matchPath( pathRel, archiveExclusionREs ) ) {
+				continue;
+			}
+
+			if ( !archiveExclusionREs.empty() && !matchPath( pathRel, archiveInclusionREs ) ) {
+				continue;
+			}
+
+			if ( enterVPK( writer, path, pathRel, fileExclusionREs, fileInclusionREs ) ) {
 				Log_Info( "Processed VPK at `{}`", path );
 				continue;
 			}
+
 			Log_Warn( "Unable to open VPK at `{}`. Treating as a regular file...", path );
+		} else {
+			if ( !fileInclusionREs.empty() && matchPath( pathRel, fileExclusionREs ) ) {
+				continue;
+			}
+
+			if ( !fileExclusionREs.empty() && !matchPath( pathRel, fileInclusionREs ) ) {
+				continue;
+			}
 		}
 
 		// open file
@@ -156,7 +149,7 @@ auto createFromRoot( std::string_view root_, std::string_view indexLocation, boo
 	return 0;
 }
 
-static auto enterVPK( std::ofstream& writer, std::string_view vpkPath, std::string_view vpkPathRel, const std::vector<std::regex>& excluded, const std::vector<std::regex>& included ) -> bool {
+static auto enterVPK( std::ofstream& writer, std::string_view vpkPath, std::string_view vpkPathRel, const std::vector<std::regex>& excludes, const std::vector<std::regex>& includes ) -> bool {
 	using namespace vpkpp;
 
 	auto vpk = VPK::open( std::string{ vpkPath } );
@@ -166,25 +159,12 @@ static auto enterVPK( std::ofstream& writer, std::string_view vpkPath, std::stri
 
 	for ( const auto& [ entryDirectory, entries ] : vpk->getBakedEntries() ) {
 		for ( const auto& entry : entries ) {
-			auto breaker{ false };
-			for ( const auto& exclusion : excluded ) {
-				if ( std::regex_match( entry.path, exclusion ) ) {
-					breaker = true;
-					break;
-				}
-			}
-			if ( breaker )
+			if ( !excludes.empty() && matchPath( entry.path, excludes) ) {
 				continue;
+			}
 
-			if (! included.empty() ) {
-				for ( const auto& inclusion: included ) {
-					if ( std::regex_match( entry.path, inclusion ) ) {
-						breaker = true;
-						break;
-					}
-				}
-				if (! breaker )
-					continue;
+			if ( !includes.empty() && !matchPath( entry.path, includes ) ) {
+				continue;
 			}
 
 			auto entryData{ vpk->readEntry( entry ) };
@@ -213,4 +193,25 @@ static auto enterVPK( std::ofstream& writer, std::string_view vpkPath, std::stri
 	}
 
 	return true;
+}
+
+static auto buildRegexCollection( const std::vector<std::string>& regexStrings, std::string_view collectionType ) -> std::vector<std::regex> {
+	std::vector<std::regex> collection {};
+
+	if ( !regexStrings.empty() ) {
+		Log_Info( "Compiling {} regexes...", collectionType );
+		collection.reserve( regexStrings.size() );
+
+		for ( const auto& item : regexStrings ) {
+			collection.emplace_back( item, std::regex::ECMAScript | std::regex::icase | std::regex::optimize );
+		}
+	}
+
+	return collection;
+}
+
+static auto matchPath( const std::string& path, const std::vector<std::regex>& regexes ) -> bool {
+	return std::any_of( regexes.begin(), regexes.end(), [&]( const auto& item ) {
+		return std::regex_match( path, item );
+	});
 }

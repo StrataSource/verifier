@@ -39,8 +39,10 @@ auto main( int argc, char* argv[] ) -> int {
 	bool newIndex{ false };
 	std::string root;
 	bool skipArchives{ false };
-	std::vector<std::string> excludes;
-	std::vector<std::string> includes;
+	std::vector<std::string> fileExcludes;
+	std::vector<std::string> fileIncludes;
+	std::vector<std::string> archiveExcludes;
+	std::vector<std::string> archiveIncludes;
 	std::string indexLocation;
 	bool overwrite{ false };
 	const auto programFile{ std::filesystem::path( argv[ 0 ] ).filename() };
@@ -64,13 +66,20 @@ auto main( int argc, char* argv[] ) -> int {
 		.help( "Don't parse files stored in VPKs, parse the entire VPK instead." )
 		.metavar( "skip-archives" )
 		.absent( false );
-	params.add_parameter( excludes, "--exclude", "-e" )
+	params.add_parameter( fileExcludes, "--exclude", "-e" )
 		.help( "RegExp pattern(s) to exclude files when creating the index." )
 		.metavar( "excluded" )
 		.minargs( 1 );
-	params.add_parameter( includes, "--include" )
+	params.add_parameter( fileIncludes, "--include" )
 		.help( "RegExp pattern(s) to include files when creating the index. If not present, all files not matching an exclusion will be included." )
 		.metavar( "included" );
+	params.add_parameter( archiveExcludes, "--exclude-archives", "-E" )
+		.help( "RegExp pattern(s) to exclude VPKs when creating the index." )
+		.metavar( "excluded-archives" )
+		.minargs( 1 );
+	params.add_parameter( archiveIncludes, "--include-archives" )
+		.help( "RegExp pattern(s) to include VPKs when creating the index. If not present, all VPKs not matching an exclusion will be included." )
+		.metavar( "included-archives" );
 	params.add_parameter( indexLocation, "--index", "-i" )
 		.help( "The index file to use." )
 		.metavar( "index-loc" )
@@ -119,17 +128,17 @@ auto main( int argc, char* argv[] ) -> int {
 		}
 
 		// stuff we ignore during the building of the index, the "standard" useless stuff is hardcoded
-		excludes.emplace_back( "sdk_content.*" );
-		excludes.emplace_back( ".*\\.vmf_autosave.*" );
-		excludes.emplace_back( ".*\\.vmx" );
-		excludes.emplace_back( ".*\\.log" );
-		excludes.emplace_back( ".*verifier_index\\.rsv" );
+		fileExcludes.emplace_back( "sdk_content.*" );
+		fileExcludes.emplace_back( ".*\\.vmf_autosave.*" );
+		fileExcludes.emplace_back( ".*\\.vmx" );
+		fileExcludes.emplace_back( ".*\\.log" );
+		fileExcludes.emplace_back( ".*verifier_index\\.rsv" );
 
-		ret = createFromRoot( root, indexLocation, skipArchives, excludes, includes );
+		ret = createFromRoot( root, indexLocation, skipArchives, fileExcludes, fileIncludes, archiveExcludes, archiveIncludes );
 	} else {
 		if ( overwrite )
 			Log_Error( "current action doesn't support `--overwrite`, please remove it." );
-		if (! excludes.empty() )
+		if ( !fileExcludes.empty() )
 			Log_Error( "current action doesn't support `--exclude`, please remove it." );
 
 		ret = verify( root, indexLocation );
