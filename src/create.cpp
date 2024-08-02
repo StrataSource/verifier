@@ -67,36 +67,18 @@ auto createFromRoot( std::string_view root_, std::string_view indexLocation, boo
 		auto pathRel{ std::filesystem::relative( path, root ).string() };
 		sourcepp::string::normalizeSlashes( pathRel );
 
-		if ( path.ends_with( ".vpk" ) ) {
-			static const std::regex numberedVpkRegex { R"(.*_[0-9][0-9][0-9]\.vpk)", std::regex::ECMAScript | std::regex::icase | std::regex::optimize };
+		if ( ( !fileExclusionREs.empty() && matchPath( pathRel, fileExclusionREs ) ) || ( !fileInclusionREs.empty() && !matchPath( pathRel, fileInclusionREs ) ) ) {
+			// File is either excluded or not included
+			continue;
+		}
 
-			if ( skipArchives || std::regex_match( pathRel, numberedVpkRegex ) ) {
-				continue;
-			}
-
-			if ( !archiveExclusionREs.empty() && matchPath( pathRel, archiveExclusionREs ) ) {
-				continue;
-			}
-
-			if ( !archiveInclusionREs.empty() && !matchPath( pathRel, archiveInclusionREs ) ) {
-				continue;
-			}
-
-
-			if ( enterVPK( writer, path, pathRel, fileExclusionREs, fileInclusionREs, count ) ) {
+		if ( !skipArchives && path.ends_with( ".vpk" ) ) {
+			if ( enterVPK( writer, path, pathRel, archiveExclusionREs, archiveInclusionREs, count ) ) {
 				Log_Info( "Processed VPK at `{}`", path );
 				continue;
 			}
 
 			Log_Warn( "Unable to open VPK at `{}`. Treating as a regular file...", path );
-		} else {
-			if ( !fileExclusionREs.empty() && matchPath( pathRel, fileExclusionREs ) ) {
-				continue;
-			}
-
-			if ( !fileInclusionREs.empty() && !matchPath( pathRel, fileInclusionREs ) ) {
-				continue;
-			}
 		}
 
 		// open file
@@ -196,7 +178,7 @@ auto createFromSteamDepotConfigs( const std::string& configPath, const std::vect
 			continue;
 		}
 
-		const auto createFromSteamDepotConfig{ [ &configPath, &indexLocation, skipArchives, &fileExcludes, &contentRoot, &fileIncludes, &archiveExcludes, &archiveIncludes ]( const KV1Element& depotBuildConfig ) {
+		const auto createFromSteamDepotConfig{ [ &configPath, &indexLocation, skipArchives, &fileExcludes, &fileIncludes, &archiveExcludes, &archiveIncludes, &contentRoot ]( const KV1Element& depotBuildConfig ) {
 			std::vector<std::string> exclusionRegexes;
 			exclusionRegexes.insert( exclusionRegexes.end(), fileExcludes.begin(), fileExcludes.end() );
 			for ( int i = 0; i < depotBuildConfig.getChildCount( "FileExclusion" ); i++ ) {

@@ -75,13 +75,13 @@ auto main( int argc, char* argv[] ) -> int {
 	params.add_parameter( fileIncludes, "--include" )
 		.help( "RegExp pattern(s) to include files when creating the index. If not present, all files not matching an exclusion will be included.")
 		.metavar( "included" );
-	params.add_parameter( archiveExcludes, "--exclude-archives", "-E" )
-		.help( "RegExp pattern(s) to exclude VPKs when creating the index. Ignored if `--steam-depot-config` is present." )
-		.metavar( "excluded-archives" )
+	params.add_parameter( archiveExcludes, "--archive-exclude", "-E" )
+		.help( "RegExp pattern(s) to exclude files inside VPKs when creating the index." )
+		.metavar( "archive-excluded" )
 		.minargs( 1 );
-	params.add_parameter( archiveIncludes, "--include-archives" )
-		.help( "RegExp pattern(s) to include VPKs when creating the index. If not present, all VPKs not matching an exclusion will be included." )
-		.metavar( "included-archives" );
+	params.add_parameter( archiveIncludes, "--archive-include" )
+		.help( "RegExp pattern(s) to include files inside VPKs when creating the index. If not present, all files inside VPKs not matching an exclusion will be included." )
+		.metavar( "archive-included" );
 	params.add_parameter( steamDepotConfig, "--steam-depot-config" )
 		.help( "Use a Steam depot configuration file to include/exclude content. Pair this option with `--steam-depot-ids`." )
 		.metavar( "steam-depot-config" )
@@ -142,6 +142,16 @@ auto main( int argc, char* argv[] ) -> int {
 		fileExcludes.emplace_back( ".*\\.log" );
 		fileExcludes.emplace_back( ".*verifier_index\\.rsv" );
 
+		// if we're reading the contents of archives, numbered VPKs should not be considered
+		if (! skipArchives ) {
+			fileExcludes.emplace_back( R"(.*_[0-9][0-9][0-9]\.vpk)" );
+		} else {
+			if (! archiveExcludes.empty() )
+				Log_Warn( "The current action doesn't support `--archive-exclude`, it will be ignored." );
+			if (! archiveIncludes.empty() )
+				Log_Warn( "The current action doesn't support `--archive-include`, it will be ignored." );
+		}
+
 		// create from a steam depot config
 		if ( !steamDepotConfig.empty() || !steamDepotIDs.empty() ) {
 			if ( steamDepotConfig.empty() && !steamDepotIDs.empty() ) {
@@ -166,9 +176,9 @@ auto main( int argc, char* argv[] ) -> int {
 	if (! fileIncludes.empty() )
 		Log_Warn( "The current action doesn't support `--include`, it will be ignored." );
 	if (! archiveExcludes.empty() )
-		Log_Warn( "The current action doesn't support `--exclude-archives`, it will be ignored." );
+		Log_Warn( "The current action doesn't support `--archive-exclude`, it will be ignored." );
 	if (! archiveIncludes.empty() )
-		Log_Warn( "The current action doesn't support `--include-archives`, it will be ignored." );
+		Log_Warn( "The current action doesn't support `--archive-include`, it will be ignored." );
 	if (! steamDepotConfig.empty() )
 		Log_Warn( "The current action doesn't support `--steam-depot-config`, it will be ignored." );
 	if (! steamDepotIDs.empty() )
