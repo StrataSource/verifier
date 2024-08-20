@@ -11,12 +11,11 @@
 #include <cryptopp/filters.h>
 #include <cryptopp/hex.h>
 #include <cryptopp/sha.h>
-#include <sourcepp/crypto/String.h>
 #include <vpkpp/format/VPK.h>
 
 #include "log.hpp"
 
-static auto verifyArchivedFile( const std::string& archivePath, const std::string& entryPath, std::uint64_t expectedSize, std::string_view expectedSha1, std::string_view expectedCrc32, unsigned int& entries, unsigned int& errors ) -> void;
+static auto verifyArchivedFile( const std::string& archivePath, const std::string& archiveRel, const std::string& entryPath, std::uint64_t expectedSize, std::string_view expectedSha1, std::string_view expectedCrc32, unsigned int& entries, unsigned int& errors ) -> void;
 
 static auto splitString( const std::string& string, const std::string& delim ) -> std::vector<std::string>;
 
@@ -73,7 +72,7 @@ auto verify( std::string_view root_, std::string_view indexLocation ) -> int {
 		}
 
 		if ( insideArchive ) {
-			verifyArchivedFile( path.string(), pathRel, expectedSize, expectedSha1, expectedCrc32, entries, errors );
+			verifyArchivedFile( path.string(), archive, pathRel, expectedSize, expectedSha1, expectedCrc32, entries, errors );
 			continue;
 		}
 
@@ -146,7 +145,7 @@ auto verify( std::string_view root_, std::string_view indexLocation ) -> int {
 	return 0;
 }
 
-static auto verifyArchivedFile( const std::string& archivePath, const std::string& entryPath, std::uint64_t expectedSize, std::string_view expectedSha1, std::string_view expectedCrc32, unsigned int& entries, unsigned int& errors ) -> void {
+static auto verifyArchivedFile( const std::string& archivePath, const std::string& archiveRel, const std::string& entryPath, std::uint64_t expectedSize, std::string_view expectedSha1, std::string_view expectedCrc32, unsigned int& entries, unsigned int& errors ) -> void {
 	using namespace vpkpp;
 
 	static std::unordered_map<std::string, std::unique_ptr<PackFile>> loadedVPKs{};
@@ -154,11 +153,11 @@ static auto verifyArchivedFile( const std::string& archivePath, const std::strin
 		loadedVPKs[ archivePath ] = VPK::open( archivePath );
 	}
 	if (! loadedVPKs[ archivePath ]) {
-		Log_Error( "Failed to open VPK at `{}` (containing file at `{}`)", archivePath, entryPath );
+		Log_Error( "Failed to open VPK at `{}` (containing file at `{}`)", archiveRel, entryPath );
 		return;
 	}
 
-	const auto fullPath{ archivePath + '/' + entryPath };
+	const auto fullPath{ archiveRel + '/' + entryPath };
 
 	auto entry{ loadedVPKs[ archivePath ]->findEntry( entryPath ) };
 	if (! entry ) {
