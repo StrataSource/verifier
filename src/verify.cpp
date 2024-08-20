@@ -166,7 +166,7 @@ static auto verifyArchivedFile( const std::string& archivePath, const std::strin
 		return;
 	}
 
-	auto entryData{ loadedVPKs[ archivePath ]->readEntry( *entry ) };
+	auto entryData{ loadedVPKs[ archivePath ]->readEntry( entryPath ) };
 	if (! entryData ) {
 		Log_Error( "Failed to open file: `{}`", fullPath );
 		return;
