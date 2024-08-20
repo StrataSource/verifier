@@ -15,8 +15,7 @@
 #include <cryptopp/hex.h>
 #include <cryptopp/sha.h>
 #include <kvpp/kvpp.h>
-#include <sourcepp/fs/FS.h>
-#include <sourcepp/string/String.h>
+#include <sourcepp/FS.h>
 #include <vpkpp/format/VPK.h>
 
 #include "log.hpp"
@@ -242,46 +241,44 @@ auto createFromSteamDepotConfigs( const std::string& configPath, const std::vect
 static auto enterVPK( std::ofstream& writer, std::string_view vpkPath, std::string_view vpkPathRel, const std::vector<std::regex>& excludes, const std::vector<std::regex>& includes, unsigned int& count ) -> bool {
 	using namespace vpkpp;
 
-	auto vpk = VPK::open( std::string{ vpkPath } );
+	const auto vpk = VPK::open( std::string{ vpkPath } );
 	if (! vpk ) {
 		return false;
 	}
 
-	for ( const auto& [ entryDirectory, entries ] : vpk->getBakedEntries() ) {
-		for ( const auto& entry : entries ) {
-			if ( !excludes.empty() && matchPath( entry.path, excludes) ) {
-				continue;
-			}
-
-			if ( !includes.empty() && !matchPath( entry.path, includes ) ) {
-				continue;
-			}
-
-			auto entryData{ vpk->readEntry( entry ) };
-			if (! entryData ) {
-				Log_Error( "Failed to open file: `{}/{}`", vpkPath, entry.path );
-				continue;
-			}
-
-			// sha1 (crc32 is already computed)
-			CryptoPP::SHA1 sha1er{};
-			sha1er.Update( reinterpret_cast<const CryptoPP::byte*>( entryData->data() ), entryData->size() );
-			std::array<CryptoPP::byte, CryptoPP::SHA1::DIGESTSIZE> sha1Hash{};
-			sha1er.Final( sha1Hash.data() );
-
-			std::string sha1HashStr;
-			std::string crc32HashStr;
-			{
-				CryptoPP::StringSource sha1HashStrSink{ sha1Hash.data(), sha1Hash.size(), true, new CryptoPP::HexEncoder{ new CryptoPP::StringSink{ sha1HashStr } } };
-				CryptoPP::StringSource crc32HashStrSink{ reinterpret_cast<const CryptoPP::byte*>( &entry.crc32 ), sizeof( entry.crc32 ), true, new CryptoPP::HexEncoder{ new CryptoPP::StringSink{ crc32HashStr } } };
-			}
-
-			// write out entry
-			writer << fmt::format( "{}\xFF{}\xFF{}\xFF{}\xFF{}\xFF\xFD", vpkPathRel, entry.path, entryData->size(), sha1HashStr, crc32HashStr );
-			Log_Info( "Processed file `{}/{}`", vpkPath, entry.path );
-			count += 1;
+	vpk->runForAllEntries( [ &writer, &vpkPath, &vpkPathRel, &excludes, &includes, &count, &vpk ]( const std::string& path, const Entry& entry ) {
+		if ( !excludes.empty() && matchPath( path, excludes) ) {
+			return;
 		}
-	}
+
+		if ( !includes.empty() && !matchPath( path, includes ) ) {
+			return;
+		}
+
+		auto entryData{ vpk->readEntry( path ) };
+		if (! entryData ) {
+			Log_Error( "Failed to open file: `{}/{}`", vpkPath, path );
+			return;
+		}
+
+		// sha1 (crc32 is already computed)
+		CryptoPP::SHA1 sha1er{};
+		sha1er.Update( reinterpret_cast<const CryptoPP::byte*>( entryData->data() ), entryData->size() );
+		std::array<CryptoPP::byte, CryptoPP::SHA1::DIGESTSIZE> sha1Hash{};
+		sha1er.Final( sha1Hash.data() );
+
+		std::string sha1HashStr;
+		std::string crc32HashStr;
+		{
+			CryptoPP::StringSource sha1HashStrSink{ sha1Hash.data(), sha1Hash.size(), true, new CryptoPP::HexEncoder{ new CryptoPP::StringSink{ sha1HashStr } } };
+			CryptoPP::StringSource crc32HashStrSink{ reinterpret_cast<const CryptoPP::byte*>( &entry.crc32 ), sizeof( entry.crc32 ), true, new CryptoPP::HexEncoder{ new CryptoPP::StringSink{ crc32HashStr } } };
+		}
+
+		// write out entry
+		writer << fmt::format( "{}\xFF{}\xFF{}\xFF{}\xFF{}\xFF\xFD", vpkPathRel, path, entryData->size(), sha1HashStr, crc32HashStr );
+		Log_Info( "Processed file `{}/{}`", vpkPath, path );
+		count += 1;
+	} );
 
 	return true;
 }

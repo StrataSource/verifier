@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.24)
 
 project( verifier
 	DESCRIPTION "A tool used to verify a game's install."
-	VERSION 0.3.2
+	VERSION 0.3.3
 )
 set( CMAKE_CXX_STANDARD 20 )
 set( CMAKE_CXX_STANDARD_REQUIRED ON )
@@ -44,7 +44,7 @@ target_compile_definitions( ${PROJECT_NAME} PRIVATE $<$<CONFIG:Debug>:DEBUG> "VE
 
 # Link to CLI dependencies
 include( "${CMAKE_CURRENT_SOURCE_DIR}/src/thirdparty/CMakeLists.txt" )
-target_link_libraries( ${PROJECT_NAME} PRIVATE Argumentum::argumentum cryptopp::cryptopp fmt::fmt kvpp vpkpp)
+target_link_libraries( ${PROJECT_NAME} PRIVATE Argumentum::argumentum cryptopp::cryptopp fmt::fmt sourcepp::kvpp sourcepp::vpkpp)
 
 # Create GUI executable
 if( VERIFIER_BUILD_GUI )
