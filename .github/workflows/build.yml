@@ -55,7 +55,7 @@ jobs:
         build_type: [Debug, Release]
         compiler: [clang]
     runs-on: ubuntu-22.04
-    container: registry.gitlab.steamos.cloud/steamrt/soldier/sdk:latest
+    container: debian:11
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
