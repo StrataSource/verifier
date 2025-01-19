@@ -177,7 +177,7 @@ auto createFromSteamDepotConfigs( const std::string& configPath, const std::vect
 			continue;
 		}
 
-		const auto createFromSteamDepotConfig{ [ &configPath, &indexLocation, skipArchives, &fileExcludes, &fileIncludes, &archiveExcludes, &archiveIncludes, &contentRoot ]( const KV1Element& depotBuildConfig ) {
+		const auto createFromSteamDepotConfig{ [ &configPath, &indexLocation, skipArchives, &fileExcludes, &fileIncludes, &archiveExcludes, &archiveIncludes, &contentRoot ]( const auto& depotBuildConfig ) {
 			std::vector<std::string> exclusionRegexes;
 			exclusionRegexes.insert( exclusionRegexes.end(), fileExcludes.begin(), fileExcludes.end() );
 			for ( int i = 0; i < depotBuildConfig.getChildCount( "FileExclusion" ); i++ ) {
