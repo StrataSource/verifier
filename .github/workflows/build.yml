@@ -55,6 +55,7 @@ jobs:
         build_type: [Debug, Release]
         compiler: [clang]
     runs-on: ubuntu-22.04
+    container: registry.gitlab.steamos.cloud/steamrt/soldier/sdk:latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -64,7 +65,7 @@ jobs:
       - name: Install Necessary Packages
         run: |
           sudo apt update
-          sudo apt install -y cmake build-essential ninja-build chrpath
+          sudo apt install -y cmake build-essential ninja-build chrpath git
 
       - name: Install Clang
         if: ${{matrix.compiler == 'clang'}}
