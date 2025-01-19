@@ -67,15 +67,9 @@ jobs:
           sudo apt update
           sudo apt install -y cmake build-essential ninja-build chrpath git
 
-      - name: Install Clang
-        if: ${{matrix.compiler == 'clang'}}
-        uses: KyleMayes/install-llvm-action@v1
-        with:
-          version: 17
-
       - name: Configure CMake
         run: |
-          cmake -G "Ninja" -B "${{env.BUILD_DIR}}" -DCMAKE_C_COMPILER="clang" -DCMAKE_CXX_COMPILER="clang++" -DCMAKE_BUILD_TYPE=${{matrix.build_type}}
+          cmake -G "Ninja" -B "${{env.BUILD_DIR}}" -DCMAKE_BUILD_TYPE=${{matrix.build_type}}
 
       - name: Build
         working-directory: '${{env.BUILD_DIR}}'

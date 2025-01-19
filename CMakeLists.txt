@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION 3.18)
 
 project( verifier
 	DESCRIPTION "A tool used to verify a game's install."
