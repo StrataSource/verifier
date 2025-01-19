@@ -60,8 +60,8 @@ jobs:
 
       - name: Install Necessary Packages
         run: |
-          sudo apt update
-          sudo apt install -y cmake build-essential ninja-build chrpath git
+          apt update
+          apt install -y cmake build-essential ninja-build chrpath git
 
       - name: Checkout Repository
         uses: actions/checkout@v4
