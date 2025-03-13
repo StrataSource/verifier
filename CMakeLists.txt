@@ -46,6 +46,13 @@ target_compile_definitions( ${PROJECT_NAME} PRIVATE $<$<CONFIG:Debug>:DEBUG> "VE
 include( "${CMAKE_CURRENT_SOURCE_DIR}/src/thirdparty/CMakeLists.txt" )
 target_link_libraries( ${PROJECT_NAME} PRIVATE Argumentum::argumentum cryptopp::cryptopp fmt::fmt sourcepp::kvpp sourcepp::vpkpp)
 
+if (UNIX)
+	set_target_properties(
+		verifier PROPERTIES
+			LINK_FLAGS "-static-libgcc -static-libstdc++ -static"
+	)
+endif()
+
 # Create GUI executable
 if( VERIFIER_BUILD_GUI )
 	add_subdirectory( ui )
