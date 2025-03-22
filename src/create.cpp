@@ -28,8 +28,23 @@ static auto globToRegex( std::string_view glob ) -> std::string;
 auto createFromRoot( std::string_view root_, std::string_view indexLocation, bool skipArchives,
 					 const std::vector<std::string>& fileExcludes, const std::vector<std::string>& fileIncludes,
 					 const std::vector<std::string>& archiveExcludes, const std::vector<std::string>& archiveIncludes ) -> int {
-	const std::filesystem::path root{ root_ };
-	const std::filesystem::path indexPath{ root / indexLocation };
+
+#ifdef WIN32
+	char correctSeparator = '\\';
+	char badSeparator = '/';
+#else
+	char correctSeparator = '/';
+	char badSeparator = '\\';
+#endif
+
+	// Fix up slashes
+	std::string rootTmp { root_ };
+	std::replace( rootTmp.begin(), rootTmp.end(), badSeparator, correctSeparator );
+	std::string indexLocationTmp { indexLocation };
+	std::replace( indexLocationTmp.begin(), indexLocationTmp.end(), badSeparator, correctSeparator );
+
+	const std::filesystem::path root{ rootTmp };
+	const std::filesystem::path indexPath{ root / indexLocationTmp };
 
 	auto start{ std::chrono::high_resolution_clock::now() };
 	Log_Info( "Creating index file at `{}`", indexPath.string() );
