@@ -100,6 +100,10 @@ auto main( int argc, char* argv[] ) -> int {
 	params.add_parameter( g_bUIReportMode, "--ui-report" )
 		.help( "Use UI report mode logging." )
 		.metavar( "ui-report" );
+	params.add_parameter( g_bLogVerbose, "--verbose" )
+		.help( "Use verbose logging." )
+		.metavar( "verbose" );
+
 
 	if (! parser.parse_args( argc, argv, 1 ) ) {
 		return 1;

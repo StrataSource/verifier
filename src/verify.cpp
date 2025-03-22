@@ -95,7 +95,7 @@ auto verify( std::string_view root_, std::string_view indexLocation ) -> int {
 		auto length{ std::ftell( file ) };
 		if ( length != expectedSize ) {
 			Log_Report( pathRel, "Sizes don't match.", std::to_string( length ), std::to_string( expectedSize ) );
-			Log_Info( "Processed entry `{}`", pathRel );
+			Log_Verbose( "Processed entry `{}`", pathRel );
 			entries += 1;
 			errors += 1;
 			continue;
@@ -134,7 +134,7 @@ auto verify( std::string_view root_, std::string_view indexLocation ) -> int {
 			errors += 1;
 		}
 
-		Log_Info( "Processed file `{}`", pathRel );
+		Log_Verbose( "Processed file `{}`", pathRel );
 		entries += 1;
 	}
 	std::fclose( file );
@@ -174,7 +174,7 @@ static auto verifyArchivedFile( const std::string& archivePath, const std::strin
 
 	if ( entryData->size() != expectedSize ) {
 		Log_Report( fullPath, "Sizes don't match.", std::to_string( entryData->size() ), std::to_string( expectedSize ) );
-		Log_Info( "Processed entry `{}`", fullPath );
+		Log_Verbose( "Processed entry `{}`", fullPath );
 		entries += 1;
 		errors += 1;
 		return;
@@ -203,7 +203,7 @@ static auto verifyArchivedFile( const std::string& archivePath, const std::strin
 		errors += 1;
 	}
 
-	Log_Info( "Processed file `{}`", fullPath );
+	Log_Verbose( "Processed file `{}`", fullPath );
 	entries += 1;
 }
 

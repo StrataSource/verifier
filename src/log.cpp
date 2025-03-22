@@ -3,10 +3,17 @@
 #include <cstdio>
 
 bool g_bUIReportMode = false;
+bool g_bLogVerbose = false;
 
 auto Log_Message( LogSeverity severity, std::string_view message ) -> void {
+
+	// Only print verbose logs if we have --verbose on
+	if ( severity == LogSeverity::Verbose && !g_bLogVerbose )
+		return;
+
 	// Don't log in report only mode!
 	static constexpr std::string_view prefixes[] = {
+		"Verbose",
 		"Info",
 		"Warn",
 		"Error",

@@ -123,7 +123,7 @@ auto createFromRoot( std::string_view root_, std::string_view indexLocation, boo
 
 		// write out entry
 		writer << fmt::format( ".\xFF{}\xFF{}\xFF{}\xFF{}\xFF\xFD", pathRel, size, sha1HashStr, crc32HashStr );
-		Log_Info( "Processed file `{}`", path );
+		Log_Verbose( "Processed file `{}`", path );
 		count += 1;
 	}
 
@@ -276,7 +276,7 @@ static auto enterVPK( std::ofstream& writer, std::string_view vpkPath, std::stri
 
 		// write out entry
 		writer << fmt::format( "{}\xFF{}\xFF{}\xFF{}\xFF{}\xFF\xFD", vpkPathRel, path, entryData->size(), sha1HashStr, crc32HashStr );
-		Log_Info( "Processed file `{}/{}`", vpkPath, path );
+		Log_Verbose( "Processed file `{}/{}`", vpkPath, path );
 		count += 1;
 	} );
 
